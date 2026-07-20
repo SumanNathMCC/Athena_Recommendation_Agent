@@ -1,4 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<PackageReference Include="Docnet.Core" Version="2.6.0" />
+		<PackageReference Include="PdfPig" Version="0.1.15" />
+		<PackageReference Include="Tesseract" Version="5.2.0" />
+		<None Include="tessdata\**\*" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Athena.Core\Athena.Core.csproj" />
