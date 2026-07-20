@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "description": "Athena research corpus manifest. PDFs are not committed; use `dotnet run --project src/Athena.Ingestion -- fetch` to download fetchable entries into corpus/pdfs/.",
+  "defaultRetrievalDate": "2026-07-20",
+  "downloadDirectory": "corpus/pdfs",
+  "documents": [
+    {
+      "docId": "A1",
+      "title": "Principles for Operational Resilience (final, Mar 2021) — BCBS d516",
+      "cluster": "A",
+      "url": "https://www.bis.org/bcbs/publ/d516.pdf",
+      "localFile": "A1-d516.pdf",
+      "pageCountApprox": 20,
+      "publishedOn": "2021-03-31",
+      "lineageGroup": "bcbs-op-resilience",
+      "lineageRole": "final",
+      "licence": "BIS public publication; see https://www.bis.org/terms_conditions.htm",
+      "fetch": true
+    },
+    {
+      "docId": "A2",
+      "title": "Principles for Operational Resilience (consultative draft, Aug 2020) — BCBS d509",
+      "cluster": "A",
+      "url": "https://www.bis.org/bcbs/publ/d509.pdf",
+      "localFile": "A2-d509.pdf",
+      "pageCountApprox": 18,
+      "publishedOn": "2020-08-06",
+      "lineageGroup": "bcbs-op-resilience",
+      "lineageRole": "draft",
+      "licence": "BIS public publication; see https://www.bis.org/terms_conditions.htm",
+      "fetch": true
+    },
+    {
+      "docId": "A3",
+      "title": "Revisions to the Principles for the Sound Management of Operational Risk (final, Mar 2021) — BCBS d515",
+      "cluster": "A",
+      "url": "https://www.bis.org/bcbs/publ/d515.pdf",
+      "localFile": "A3-d515.pdf",
+      "pageCountApprox": 30,
+      "publishedOn": "2021-03-31",
+      "lineageGroup": "bcbs-psmor",
+      "lineageRole": "final",
+      "licence": "BIS public publication; see https://www.bis.org/terms_conditions.htm",
+      "fetch": true
+    },
+    {
+      "docId": "A4",
+      "title": "Revisions to the PSMOR (consultative draft, Aug 2020) — BCBS d508",
+      "cluster": "A",
+      "url": "https://www.bis.org/bcbs/publ/d508.pdf",
+      "localFile": "A4-d508.pdf",
+      "pageCountApprox": 30,
+      "publishedOn": "2020-08-06",
+      "lineageGroup": "bcbs-psmor",
+      "lineageRole": "draft",
+      "licence": "BIS public publication; see https://www.bis.org/terms_conditions.htm",
+      "fetch": true
+    },
+    {
+      "docId": "A5",
+      "title": "FSI Executive Summary: Principles for operational resilience",
+      "cluster": "A",
+      "url": "https://www.bis.org/fsi/fsisummaries/op_resilience.pdf",
+      "localFile": "A5-fsi-op-resilience-summary.pdf",
+      "pageCountApprox": 3,
+      "publishedOn": "2021-03-31",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "BIS public publication; see https://www.bis.org/terms_conditions.htm",
+      "fetch": true
+    },
+    {
+      "docId": "B1",
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "cluster": "B",
+      "url": "https://arxiv.org/pdf/2005.11401",
+      "localFile": "B1-lewis-rag.pdf",
+      "pageCountApprox": 19,
+      "publishedOn": "2020-05-22",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "B2",
+      "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+      "cluster": "B",
+      "url": "https://arxiv.org/pdf/2004.04906",
+      "localFile": "B2-karpukhin-dpr.pdf",
+      "pageCountApprox": 13,
+      "publishedOn": "2020-04-10",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "B3",
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "cluster": "B",
+      "url": "https://arxiv.org/pdf/2312.10997",
+      "localFile": "B3-gao-rag-survey.pdf",
+      "pageCountApprox": 32,
+      "publishedOn": "2023-12-18",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "B4",
+      "title": "RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval",
+      "cluster": "B",
+      "url": "https://arxiv.org/pdf/2401.18059",
+      "localFile": "B4-sarthi-raptor.pdf",
+      "pageCountApprox": 24,
+      "publishedOn": "2024-01-31",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "B5",
+      "title": "From Local to Global: A Graph RAG Approach to Query-Focused Summarization",
+      "cluster": "B",
+      "url": "https://arxiv.org/pdf/2404.16130",
+      "localFile": "B5-edge-graph-rag.pdf",
+      "pageCountApprox": 16,
+      "publishedOn": "2024-04-24",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "C1",
+      "title": "Graph Retrieval-Augmented Generation: A Survey",
+      "cluster": "C",
+      "url": "https://arxiv.org/pdf/2408.08921",
+      "localFile": "C1-peng-graph-rag-survey.pdf",
+      "pageCountApprox": 25,
+      "publishedOn": "2024-08-16",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "C2",
+      "title": "LightRAG: Simple and Fast Retrieval-Augmented Generation",
+      "cluster": "C",
+      "url": "https://arxiv.org/pdf/2410.05779",
+      "localFile": "C2-guo-lightrag.pdf",
+      "pageCountApprox": 18,
+      "publishedOn": "2024-10-08",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "C3",
+      "title": "Retrieval-Augmented Generation with Graphs (GraphRAG)",
+      "cluster": "C",
+      "url": "https://arxiv.org/pdf/2501.00309",
+      "localFile": "C3-han-graphrag.pdf",
+      "pageCountApprox": 25,
+      "publishedOn": "2024-12-30",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "C4",
+      "title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation — v1",
+      "cluster": "C",
+      "url": "https://arxiv.org/pdf/2309.15217v1",
+      "localFile": "C4-es-ragas-v1.pdf",
+      "pageCountApprox": 6,
+      "publishedOn": "2023-09-27",
+      "lineageGroup": "ragas",
+      "lineageRole": "v1",
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "C5",
+      "title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation — v2",
+      "cluster": "C",
+      "url": "https://arxiv.org/pdf/2309.15217v2",
+      "localFile": "C5-es-ragas-v2.pdf",
+      "pageCountApprox": 7,
+      "publishedOn": "2023-09-27",
+      "lineageGroup": "ragas",
+      "lineageRole": "v2",
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true
+    },
+    {
+      "docId": "D1",
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "cluster": "D",
+      "url": "https://arxiv.org/pdf/2210.03629",
+      "localFile": "D1-yao-react.pdf",
+      "pageCountApprox": 15,
+      "publishedOn": "2022-10-06",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true,
+      "clusterTopic": "Agentic AI systems and tool-using language models"
+    },
+    {
+      "docId": "D2",
+      "title": "Toolformer: Language Models Can Teach Themselves to Use Tools",
+      "cluster": "D",
+      "url": "https://arxiv.org/pdf/2302.04761",
+      "localFile": "D2-schick-toolformer.pdf",
+      "pageCountApprox": 18,
+      "publishedOn": "2023-02-09",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true,
+      "clusterTopic": "Agentic AI systems and tool-using language models"
+    },
+    {
+      "docId": "D3",
+      "title": "The Rise and Potential of Large Language Model Based Agents: A Survey",
+      "cluster": "D",
+      "url": "https://arxiv.org/pdf/2309.07864",
+      "localFile": "D3-xi-llm-agents-survey.pdf",
+      "pageCountApprox": 22,
+      "publishedOn": "2023-09-14",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true,
+      "clusterTopic": "Agentic AI systems and tool-using language models"
+    },
+    {
+      "docId": "D4",
+      "title": "MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework",
+      "cluster": "D",
+      "url": "https://arxiv.org/pdf/2308.00352",
+      "localFile": "D4-hong-metagpt.pdf",
+      "pageCountApprox": 20,
+      "publishedOn": "2023-08-01",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true,
+      "clusterTopic": "Agentic AI systems and tool-using language models"
+    },
+    {
+      "docId": "D5",
+      "title": "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation",
+      "cluster": "D",
+      "url": "https://arxiv.org/pdf/2308.08155",
+      "localFile": "D5-wu-autogen.pdf",
+      "pageCountApprox": 20,
+      "publishedOn": "2023-08-16",
+      "lineageGroup": null,
+      "lineageRole": null,
+      "licence": "arXiv.org perpetual, non-exclusive licence to distribute",
+      "fetch": true,
+      "clusterTopic": "Agentic AI systems and tool-using language models"
+    }
+  ],
+  "manufacturedDocuments": [
+    {
+      "docId": "A1-scanned",
+      "title": "Principles for Operational Resilience (BCBS d516) — scanned pages 1–12 (OCR diagnostic)",
+      "cluster": "A",
+      "sourceDocId": "A1",
+      "localFile": "A1-scanned.pdf",
+      "pageCountApprox": 12,
+      "publishedOn": "2021-03-31",
+      "lineageGroup": "bcbs-op-resilience",
+      "lineageRole": "final-ocr",
+      "licence": "Derived from BIS d516 (A1) for assignment OCR evaluation; not redistributed",
+      "fetch": false,
+      "generation": {
+        "method": "Docnet.Core rasterization at 200 DPI, image-only PDF reassembly",
+        "sourcePages": "1-12",
+        "sourceUrl": "https://www.bis.org/bcbs/publ/d516.pdf"
+      }
+    }
+  ],
+  "lineageGroups": {
+    "bcbs-op-resilience": {
+      "description": "BCBS operational resilience principles — consultative draft (d509) and final (d516)",
+      "members": ["A2", "A1", "A1-scanned"]
+    },
+    "bcbs-psmor": {
+      "description": "BCBS Principles for the Sound Management of Operational Risk — consultative draft (d508) and final (d515)",
+      "members": ["A4", "A3"]
+    },
+    "ragas": {
+      "description": "RAGAS evaluation framework — arXiv v1 and v2 preprints",
+      "members": ["C4", "C5"]
+    }
+  },
+  "clusters": {
+    "A": "Operational resilience regulation (BIS / Basel Committee)",
+    "B": "RAG architecture and retrieval (arXiv)",
+    "C": "Graph RAG and evaluation (arXiv)",
+    "D": "Agentic AI systems and tool-using language models (learner-sourced, arXiv)"
+  }
+}
