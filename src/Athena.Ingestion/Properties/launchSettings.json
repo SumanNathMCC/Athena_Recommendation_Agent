@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Fetch corpus": {
+      "commandName": "Project",
+      "commandLineArgs": "fetch --force"
+    },
+    "Fetch single doc": {
+      "commandName": "Project",
+      "commandLineArgs": "fetch --doc A1"
+    }
+  }
+}
