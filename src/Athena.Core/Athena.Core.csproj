@@ -10,8 +10,4 @@
     <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" Version="9.7.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Records\" />
-  </ItemGroup>
-
 </Project>
