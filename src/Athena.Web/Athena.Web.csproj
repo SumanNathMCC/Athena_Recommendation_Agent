@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Athena.Agent\Athena.Agent.csproj" />
+    <ProjectReference Include="..\Athena.Ingestion\Athena.Ingestion.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

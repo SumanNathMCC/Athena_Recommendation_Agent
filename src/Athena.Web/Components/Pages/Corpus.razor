@@ -1,0 +1,104 @@
+@page "/corpus"
+@rendermode InteractiveServer
+@inject ICorpusFetchService CorpusFetchService
+
+<PageTitle>Corpus Setup</PageTitle>
+
+<h3>Corpus setup</h3>
+
+<p class="text-muted">
+    Download research PDFs from <code>corpus/manifest.json</code> into <code>corpus/pdfs/</code>.
+    Ingestion and embedding will be available on this page in a later step.
+</p>
+
+<div class="mb-3 d-flex gap-2">
+    <button class="btn btn-primary"
+            disabled="@_isRunning"
+            @onclick="FetchCorpusAsync">
+        @(_isRunning ? "Fetching…" : "Fetch corpus")
+    </button>
+
+    <button class="btn btn-outline-secondary"
+            disabled="@_isRunning"
+            @onclick="FetchCorpusForceAsync">
+        Force re-download
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="status">
+        @_statusMessage
+    </div>
+}
+
+@if (_result is not null)
+{
+    <p class="fw-semibold">
+        Downloaded: @_result.Downloaded |
+        Skipped: @_result.Skipped |
+        Failed: @_result.Failed
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Doc ID</th>
+                    <th>File</th>
+                    <th>Status</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _result.Items)
+                {
+                    <tr>
+                        <td>@item.DocId</td>
+                        <td>@item.LocalFile</td>
+                        <td>@item.Status</td>
+                        <td>@(item.Message ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private bool _isRunning;
+    private bool _isError;
+    private string? _statusMessage;
+    private FetchResult? _result;
+
+    private Task FetchCorpusAsync() => RunFetchAsync(force: false);
+
+    private Task FetchCorpusForceAsync() => RunFetchAsync(force: true);
+
+    private async Task RunFetchAsync(bool force)
+    {
+        _isRunning = true;
+        _isError = false;
+        _statusMessage = null;
+        _result = null;
+        StateHasChanged();
+
+        try
+        {
+            _result = await CorpusFetchService.FetchAllAsync(force);
+            _statusMessage = _result.IsSuccess
+                ? "Corpus fetch completed successfully."
+                : "Corpus fetch completed with one or more failures.";
+            _isError = !_result.IsSuccess;
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _statusMessage = ex.Message;
+        }
+        finally
+        {
+            _isRunning = false;
+        }
+    }
+}
