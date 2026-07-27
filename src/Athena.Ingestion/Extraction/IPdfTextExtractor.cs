@@ -1,9 +1,7 @@
 ﻿namespace Athena.Ingestion.Extraction;
 
 /// <summary>
-/// Extracts per-page text from a PDF file. Implementations may be native-text-based
-/// (PdfPig) or OCR-based (Tesseract via Docnet.Core rasterisation), or route between
-/// the two per page (Hybrid).
+/// Extracts per-page text from a PDF file using Azure Document Intelligence.
 /// </summary>
 public interface IPdfTextExtractor
 {

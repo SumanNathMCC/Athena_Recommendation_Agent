@@ -1,11 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<ItemGroup>
-		<PackageReference Include="Docnet.Core" Version="2.6.0" />
-		<PackageReference Include="PdfPig" Version="0.1.15" />
-		<PackageReference Include="System.Drawing.Common" Version="10.0.10" />
-		<PackageReference Include="Tesseract" Version="5.2.0" />
-		<None Include="tessdata\**\*" CopyToOutputDirectory="PreserveNewest" />
+		<PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

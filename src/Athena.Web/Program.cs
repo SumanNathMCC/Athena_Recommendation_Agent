@@ -1,12 +1,20 @@
+using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
 using Athena.Web.Components;
 using Athena.Web.Services;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<DocumentIntelligenceOptions>(
+    builder.Configuration.GetSection(DocumentIntelligenceOptions.SectionName));
+builder.Services.AddSingleton<IPdfTextExtractor>(sp =>
+    new DocumentIntelligenceTextExtractor(
+        sp.GetRequiredService<IOptions<DocumentIntelligenceOptions>>().Value));
 
 builder.Services.AddSingleton<ICorpusManifestReader, CorpusManifestReader>();
 builder.Services.AddHttpClient<ICorpusFetcher, CorpusFetcher>(client =>
