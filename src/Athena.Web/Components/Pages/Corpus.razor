@@ -1,28 +1,91 @@
 @page "/corpus"
 @rendermode InteractiveServer
-@inject ICorpusFetchService CorpusFetchService
+@inject ICorpusSetupService CorpusSetupService
+@implements IAsyncDisposable
 
 <PageTitle>Corpus Setup</PageTitle>
 
 <h3>Corpus setup</h3>
 
 <p class="text-muted">
-    Download research PDFs from <code>corpus/manifest.json</code> into <code>corpus/pdfs/</code>.
-    Ingestion and embedding will be available on this page in a later step.
+    Download PDFs, extract text with Azure Document Intelligence, and stage ingestion artifacts.
 </p>
 
-<div class="mb-3 d-flex gap-2">
-    <button class="btn btn-primary"
-            disabled="@_isRunning"
-            @onclick="FetchCorpusAsync">
-        @(_isRunning ? "Fetching…" : "Fetch corpus")
-    </button>
+<div class="card mb-4">
+    <div class="card-header fw-semibold">1. Download</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Fetch research PDFs from <code>corpus/manifest.json</code> into <code>corpus/pdfs/</code>.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary"
+                    disabled="@_isRunning"
+                    @onclick="() => RunFetchAsync(force: false)">
+                @ButtonLabel("Fetch corpus", _currentOperation == Operation.Fetch)
+            </button>
+            <button class="btn btn-outline-secondary"
+                    disabled="@_isRunning"
+                    @onclick="() => RunFetchAsync(force: true)">
+                @ButtonLabel("Force re-download", _currentOperation == Operation.FetchForce)
+            </button>
+        </div>
+    </div>
+</div>
 
-    <button class="btn btn-outline-secondary"
-            disabled="@_isRunning"
-            @onclick="FetchCorpusForceAsync">
-        Force re-download
-    </button>
+<div class="card mb-4">
+    <div class="card-header fw-semibold">2. Extract (Azure Document Intelligence)</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Extract per-page text via <code>prebuilt-read</code> into <code>corpus/extracted/</code>.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary"
+                    disabled="@_isRunning"
+                    @onclick="() => RunExtractAsync(force: false)">
+                @ButtonLabel("Extract text", _currentOperation == Operation.Extract)
+            </button>
+            <button class="btn btn-outline-secondary"
+                    disabled="@_isRunning"
+                    @onclick="() => RunExtractAsync(force: true)">
+                @ButtonLabel("Force re-extract", _currentOperation == Operation.ExtractForce)
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header fw-semibold">3. Inject</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Build page-level chunk artifacts from extracted text into <code>corpus/ingested/</code>.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary"
+                    disabled="@_isRunning"
+                    @onclick="() => RunInjectAsync(force: false)">
+                @ButtonLabel("Inject staged data", _currentOperation == Operation.Inject)
+            </button>
+            <button class="btn btn-outline-secondary"
+                    disabled="@_isRunning"
+                    @onclick="() => RunInjectAsync(force: true)">
+                @ButtonLabel("Force re-inject", _currentOperation == Operation.InjectForce)
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header fw-semibold">Run all</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Force download, extract, and inject every document in one pass.
+        </p>
+        <button class="btn btn-warning"
+                disabled="@_isRunning"
+                @onclick="RunFullPipelineAsync">
+            @ButtonLabel("Force download + extract + inject", _currentOperation == Operation.FullPipeline)
+        </button>
+    </div>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(_statusMessage))
@@ -32,32 +95,52 @@
     </div>
 }
 
-@if (_result is not null)
+@if (_summary is not null)
 {
-    <p class="fw-semibold">
-        Downloaded: @_result.Downloaded |
-        Skipped: @_result.Skipped |
-        Failed: @_result.Failed
-    </p>
+    <p class="fw-semibold">@_summary</p>
+}
 
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="mb-0">Document pipeline status</h5>
+    <button class="btn btn-sm btn-outline-primary"
+            disabled="@_isRunning"
+            @onclick="RefreshStatusAsync">
+        Refresh status
+    </button>
+</div>
+
+@if (_documents.Count == 0 && !_isLoadingStatus)
+{
+    <p class="text-muted">No documents found in the corpus manifest.</p>
+}
+else if (_isLoadingStatus && _documents.Count == 0)
+{
+    <p class="text-muted">Loading status…</p>
+}
+else
+{
     <div class="table-responsive">
-        <table class="table table-sm table-striped">
+        <table class="table table-sm table-striped align-middle">
             <thead>
                 <tr>
                     <th>Doc ID</th>
                     <th>File</th>
-                    <th>Status</th>
-                    <th>Message</th>
+                    <th>Download</th>
+                    <th>Extract</th>
+                    <th>Inject</th>
+                    <th>Details</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in _result.Items)
+                @foreach (var document in _documents)
                 {
                     <tr>
-                        <td>@item.DocId</td>
-                        <td>@item.LocalFile</td>
-                        <td>@item.Status</td>
-                        <td>@(item.Message ?? "—")</td>
+                        <td>@document.DocId</td>
+                        <td><code>@document.LocalFile</code></td>
+                        <td>@StageBadge(document.Download)</td>
+                        <td>@StageBadge(document.Extract)</td>
+                        <td>@StageBadge(document.Inject)</td>
+                        <td class="small text-muted">@FormatDetails(document)</td>
                     </tr>
                 }
             </tbody>
@@ -66,30 +149,121 @@
 }
 
 @code {
+    private enum Operation
+    {
+        None,
+        Fetch,
+        FetchForce,
+        Extract,
+        ExtractForce,
+        Inject,
+        InjectForce,
+        FullPipeline
+    }
+
     private bool _isRunning;
+    private bool _isLoadingStatus = true;
     private bool _isError;
     private string? _statusMessage;
-    private FetchResult? _result;
+    private string? _summary;
+    private Operation _currentOperation = Operation.None;
+    private List<CorpusDocPipelineStatus> _documents = [];
 
-    private Task FetchCorpusAsync() => RunFetchAsync(force: false);
-
-    private Task FetchCorpusForceAsync() => RunFetchAsync(force: true);
-
-    private async Task RunFetchAsync(bool force)
+    protected override async Task OnInitializedAsync()
     {
-        _isRunning = true;
-        _isError = false;
-        _statusMessage = null;
-        _result = null;
+        await RefreshStatusAsync();
+    }
+
+    private async Task RefreshStatusAsync()
+    {
+        _isLoadingStatus = true;
         StateHasChanged();
 
         try
         {
-            _result = await CorpusFetchService.FetchAllAsync(force);
-            _statusMessage = _result.IsSuccess
-                ? "Corpus fetch completed successfully."
-                : "Corpus fetch completed with one or more failures.";
-            _isError = !_result.IsSuccess;
+            _documents = (await CorpusSetupService.GetStatusAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _statusMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoadingStatus = false;
+        }
+    }
+
+    private Task RunFetchAsync(bool force) =>
+        RunOperationAsync(
+            force ? Operation.FetchForce : Operation.Fetch,
+            async () =>
+            {
+                var result = await CorpusSetupService.FetchAsync(force);
+                _summary = $"Download — succeeded: {result.Downloaded}, skipped: {result.Skipped}, failed: {result.Failed}";
+                _statusMessage = result.IsSuccess
+                    ? "Corpus fetch completed successfully."
+                    : "Corpus fetch completed with one or more failures.";
+                _isError = !result.IsSuccess;
+                await RefreshStatusAsync();
+            });
+
+    private Task RunExtractAsync(bool force) =>
+        RunOperationAsync(
+            force ? Operation.ExtractForce : Operation.Extract,
+            async () =>
+            {
+                var result = await CorpusSetupService.ExtractAsync(force);
+                _summary = $"Extract — succeeded: {result.Succeeded}, skipped: {result.Skipped}, failed: {result.Failed}";
+                _statusMessage = result.IsSuccess
+                    ? "Extraction completed successfully."
+                    : "Extraction completed with one or more failures.";
+                _isError = !result.IsSuccess;
+                _documents = result.Documents.ToList();
+            });
+
+    private Task RunInjectAsync(bool force) =>
+        RunOperationAsync(
+            force ? Operation.InjectForce : Operation.Inject,
+            async () =>
+            {
+                var result = await CorpusSetupService.InjectAsync(force);
+                _summary = $"Inject — succeeded: {result.Succeeded}, skipped: {result.Skipped}, failed: {result.Failed}";
+                _statusMessage = result.IsSuccess
+                    ? "Injection staging completed successfully."
+                    : "Injection staging completed with one or more failures.";
+                _isError = !result.IsSuccess;
+                _documents = result.Documents.ToList();
+            });
+
+    private Task RunFullPipelineAsync() =>
+        RunOperationAsync(
+            Operation.FullPipeline,
+            async () =>
+            {
+                var result = await CorpusSetupService.RunFullPipelineAsync(force: true);
+                _summary =
+                    $"Full pipeline — download failed: {result.Fetch.Failed}, " +
+                    $"extract failed: {result.Extract.Failed}, inject failed: {result.Inject.Failed}";
+                _statusMessage = result.IsSuccess
+                    ? "Full pipeline completed successfully."
+                    : "Full pipeline completed with one or more failures.";
+                _isError = !result.IsSuccess;
+                _documents = result.Documents.ToList();
+            });
+
+    private async Task RunOperationAsync(Operation operation, Func<Task> action)
+    {
+        _isRunning = true;
+        _currentOperation = operation;
+        _isError = false;
+        _statusMessage = null;
+        _summary = null;
+        StateHasChanged();
+
+        try
+        {
+            await action();
         }
         catch (Exception ex)
         {
@@ -99,6 +273,43 @@
         finally
         {
             _isRunning = false;
+            _currentOperation = Operation.None;
         }
     }
+
+    private static string ButtonLabel(string label, bool isActive) =>
+        isActive ? $"{label}…" : label;
+
+    private static RenderFragment StageBadge(PipelineStageStatus status) => builder =>
+    {
+        var (cssClass, text) = status switch
+        {
+            PipelineStageStatus.Succeeded => ("bg-success", "Done"),
+            PipelineStageStatus.Skipped => ("bg-secondary", "Skipped"),
+            PipelineStageStatus.Failed => ("bg-danger", "Failed"),
+            PipelineStageStatus.InProgress => ("bg-primary", "Running"),
+            PipelineStageStatus.Pending => ("bg-info text-dark", "Pending"),
+            _ => ("bg-light text-dark", "Not started")
+        };
+
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", $"badge {cssClass}");
+        builder.AddContent(2, text);
+        builder.CloseElement();
+    };
+
+    private static string FormatDetails(CorpusDocPipelineStatus document)
+    {
+        var parts = new[]
+        {
+            document.DownloadMessage,
+            document.ExtractMessage,
+            document.InjectMessage
+        }
+        .Where(message => !string.IsNullOrWhiteSpace(message));
+
+        return string.Join(" | ", parts);
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

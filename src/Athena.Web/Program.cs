@@ -1,5 +1,6 @@
 using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
+using Athena.Ingestion.Pipeline;
 using Athena.Web.Components;
 using Athena.Web.Services;
 using Microsoft.Extensions.Options;
@@ -25,7 +26,20 @@ builder.Services.AddHttpClient<ICorpusFetcher, CorpusFetcher>(client =>
     client.DefaultRequestHeaders.Accept.Add(
         new MediaTypeWithQualityHeaderValue("application/pdf"));
 });
-builder.Services.AddScoped<ICorpusFetchService, CorpusFetchService>();
+builder.Services.AddSingleton<ICorpusExtractor, CorpusExtractor>();
+builder.Services.AddSingleton<ICorpusInjector, CorpusInjector>();
+builder.Services.AddScoped<ICorpusPipelineService>(sp =>
+{
+    var environment = sp.GetRequiredService<IWebHostEnvironment>();
+    var repoRoot = RepoRootLocator.Find(environment.ContentRootPath);
+    return new CorpusPipelineService(
+        sp.GetRequiredService<ICorpusManifestReader>(),
+        sp.GetRequiredService<ICorpusFetcher>(),
+        sp.GetRequiredService<ICorpusExtractor>(),
+        sp.GetRequiredService<ICorpusInjector>(),
+        repoRoot);
+});
+builder.Services.AddScoped<ICorpusSetupService, CorpusSetupService>();
 
 var app = builder.Build();
 

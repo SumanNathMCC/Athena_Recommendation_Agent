@@ -22,6 +22,10 @@ mono_crash.*
 # Corpus PDFs — manifest and SOURCES.md stay in git
 corpus/pdfs/*.pdf
 corpus/**/*.pdf
+corpus/extracted/**
+corpus/ingested/**
+!corpus/extracted/.gitkeep
+!corpus/ingested/.gitkeep
 
 # Build results
 [Dd]ebug/
