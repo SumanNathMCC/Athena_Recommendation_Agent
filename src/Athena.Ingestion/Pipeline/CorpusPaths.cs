@@ -13,7 +13,7 @@ internal static class CorpusPaths
     public static string GetExtractedPath(string repoRoot, string docId) =>
         Path.Combine(
             ResolveUnderRepo(repoRoot, ExtractedDirectory),
-            $"{docId}.json");
+            $"{docId}.md");
 
     public static string GetIngestedPath(string repoRoot, string docId) =>
         Path.Combine(

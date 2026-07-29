@@ -9,7 +9,7 @@ public sealed class DocumentIntelligenceOptions
     public string ApiKey { get; set; } = string.Empty;
 
     /// <summary>
-    /// Azure model id. Use <c>prebuilt-read</c> for text/OCR or <c>prebuilt-layout</c> for layout + tables.
+    /// Azure model id. <c>prebuilt-layout</c> extracts prose and tables in a single call.
     /// </summary>
-    public string ModelId { get; set; } = "prebuilt-read";
+    public string ModelId { get; set; } = "prebuilt-layout";
 }

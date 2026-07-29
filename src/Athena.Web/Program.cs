@@ -13,8 +13,8 @@ builder.Services.AddRazorComponents()
 
 builder.Services.Configure<DocumentIntelligenceOptions>(
     builder.Configuration.GetSection(DocumentIntelligenceOptions.SectionName));
-builder.Services.AddSingleton<IPdfTextExtractor>(sp =>
-    new DocumentIntelligenceTextExtractor(
+builder.Services.AddSingleton<IDocumentMarkdownExtractor>(sp =>
+    new DocumentIntelligenceMarkdownExtractor(
         sp.GetRequiredService<IOptions<DocumentIntelligenceOptions>>().Value));
 
 builder.Services.AddSingleton<ICorpusManifestReader, CorpusManifestReader>();

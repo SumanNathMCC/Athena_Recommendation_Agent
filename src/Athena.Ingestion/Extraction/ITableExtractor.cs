@@ -1,9 +1,8 @@
 ﻿namespace Athena.Ingestion.Extraction;
 
 /// <summary>
-/// Detects table-like regions in a PDF and serialises each one to Markdown,
-/// preserving row/column structure. Flattening a table into whitespace-joined
-/// prose is treated as a failed extraction, per assignment §6.2.
+/// Legacy interface for standalone table extraction. Table extraction is handled by
+/// <see cref="IDocumentMarkdownExtractor"/> via Azure <c>prebuilt-layout</c> in one call.
 /// </summary>
 public interface ITableExtractor
 {
