@@ -6,23 +6,12 @@ internal static class CorpusDocumentCatalog
 {
     public static IReadOnlyList<CorpusDocumentEntry> GetAllDocuments(CorpusManifest manifest)
     {
-        var entries = manifest.Documents
+        return manifest.Documents
             .Where(document => document.Fetch)
             .Select(document => new CorpusDocumentEntry(
                 document.DocId,
                 document.Title,
                 document.LocalFile))
-            .ToList();
-
-        foreach (var manufactured in manifest.ManufacturedDocuments)
-        {
-            entries.Add(new CorpusDocumentEntry(
-                manufactured.DocId,
-                manufactured.Title,
-                manufactured.LocalFile));
-        }
-
-        return entries
             .OrderBy(entry => entry.DocId, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

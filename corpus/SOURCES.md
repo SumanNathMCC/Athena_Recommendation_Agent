@@ -1,6 +1,6 @@
 # Athena Corpus — Sources
 
-This file lists every document in the Athena research library: prescribed clusters **A–C** (assignment), learner-sourced cluster **D**, and the manufactured OCR diagnostic document.
+This file lists every document in the Athena research library: prescribed clusters **A–C** (assignment) and learner-sourced cluster **D**.
 
 **Ground rules (assignment §4.2):**
 
@@ -62,14 +62,6 @@ This file lists every document in the Athena research library: prescribed cluste
 
 ---
 
-## Manufactured document — OCR diagnostic (assignment §4.1)
-
-| ID | Title | Source | ~pp | Created | Licence | Notes |
-|----|-------|--------|-----|---------|---------|-------|
-| A1-scanned | BCBS d516 pages 1–12, rasterized image-only PDF | Derived from A1 (d516) | 12 | 2026-07-20 | Derived from BIS d516; local manufacture only | **Not downloaded.** Generate with Docnet.Core at 200 DPI; ingest under distinct `DocId` alongside text-native A1 |
-
----
-
 ## Version-lineage pairs (near-duplicate trap)
 
 These pairs sit at very high cosine similarity and must be handled by the recommender (`LineageGroup` in `DocRecord`):
@@ -86,11 +78,11 @@ These pairs sit at very high cosine similarity and must be handled by the recomm
 
 | Cluster | Documents | Approx. pages |
 |---------|-----------|---------------|
-| A | 5 (+ 1 manufactured) | ~101 |
+| A | 5 | ~89 |
 | B | 5 | ~104 |
 | C | 5 | ~81 |
 | D | 5 | ~95 |
-| **Total** | **21 downloadable + 1 manufactured** | **~350–450** |
+| **Total** | **20 downloadable** | **~350–400** |
 
 ---
 

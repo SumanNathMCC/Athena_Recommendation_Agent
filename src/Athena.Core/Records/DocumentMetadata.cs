@@ -46,25 +46,4 @@ public sealed class DocumentMetadata
             PageCountApprox = document.PageCountApprox
         };
     }
-
-    public static DocumentMetadata FromManufactured(
-        Corpus.ManufacturedDocument document,
-        string filePath)
-    {
-        ArgumentNullException.ThrowIfNull(document);
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-
-        return new DocumentMetadata
-        {
-            DocId = document.DocId,
-            Title = document.Title,
-            Cluster = document.Cluster,
-            PublishedOn = document.PublishedOn,
-            LineageGroup = document.LineageGroup,
-            LineageRole = document.LineageRole,
-            FilePath = filePath,
-            SourceUrl = document.Generation?.SourceUrl,
-            PageCountApprox = document.PageCountApprox
-        };
-    }
 }
