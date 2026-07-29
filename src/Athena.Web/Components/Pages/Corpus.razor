@@ -36,7 +36,8 @@
     <div class="card-header fw-semibold">2. Extract (Azure Document Intelligence)</div>
     <div class="card-body">
         <p class="text-muted small mb-3">
-            Extract prose and tables via <code>prebuilt-layout</code> into Markdown files under <code>corpus/extracted/</code>.
+            Extract prose and tables via <code>prebuilt-layout</code> into section-structured Markdown under <code>corpus/extracted/</code>.
+            Use <strong>Force re-extract</strong> after upgrading extraction to refresh section headers and bodies.
         </p>
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-primary"
@@ -54,11 +55,25 @@
 </div>
 
 <div class="card mb-4">
-    <div class="card-header fw-semibold">3. Inject</div>
+    <div class="card-header fw-semibold">3. Inject (chunk + summarise + embed)</div>
     <div class="card-body">
         <p class="text-muted small mb-3">
-            Build page-level chunk artifacts from extracted text into <code>corpus/ingested/</code>.
+            Chunk extracted sections into <code>corpus/ingested/{docId}.md</code>,
+            generate an LLM document summary, and upsert embeddings into the Semantic Kernel
+            <strong>in-memory vector store</strong> (<code>chunks</code> and <code>documents</code> collections).
+            Requires <code>AzureFoundry</code> settings (endpoint, API key, chat + embedding deployments)
+            for LLM summary and embeddings via Semantic Kernel.
         </p>
+        <div class="mb-3">
+            <label class="form-label" for="chunkingStrategy">Chunking strategy</label>
+            <select id="chunkingStrategy"
+                    class="form-select"
+                    disabled="@_isRunning"
+                    @bind="_chunkingStrategy">
+                <option value="@ChunkingStrategy.SectionAware">Section-aware (default)</option>
+                <option value="@ChunkingStrategy.FixedWindow">Fixed window (1000 tokens, 20% overlap)</option>
+            </select>
+        </div>
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-primary"
                     disabled="@_isRunning"
@@ -167,6 +182,7 @@ else
     private string? _statusMessage;
     private string? _summary;
     private Operation _currentOperation = Operation.None;
+    private ChunkingStrategy _chunkingStrategy = ChunkingStrategy.SectionAware;
     private List<CorpusDocPipelineStatus> _documents = [];
 
     protected override async Task OnInitializedAsync()
@@ -227,7 +243,7 @@ else
             force ? Operation.InjectForce : Operation.Inject,
             async () =>
             {
-                var result = await CorpusSetupService.InjectAsync(force);
+                var result = await CorpusSetupService.InjectAsync(force, _chunkingStrategy);
                 _summary = $"Inject — succeeded: {result.Succeeded}, skipped: {result.Skipped}, failed: {result.Failed}";
                 _statusMessage = result.IsSuccess
                     ? "Injection staging completed successfully."
@@ -241,7 +257,7 @@ else
             Operation.FullPipeline,
             async () =>
             {
-                var result = await CorpusSetupService.RunFullPipelineAsync(force: true);
+                var result = await CorpusSetupService.RunFullPipelineAsync(force: true, _chunkingStrategy);
                 _summary =
                     $"Full pipeline — download failed: {result.Fetch.Failed}, " +
                     $"extract failed: {result.Extract.Failed}, inject failed: {result.Inject.Failed}";

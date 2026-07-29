@@ -1,4 +1,5 @@
 using Athena.Core.Corpus;
+using Athena.Ingestion.Chunking;
 using Athena.Ingestion.Pipeline;
 
 namespace Athena.Web.Services;
@@ -11,9 +12,15 @@ public interface ICorpusSetupService
 
     Task<CorpusPipelineOperationResult> ExtractAsync(bool force = false, CancellationToken ct = default);
 
-    Task<CorpusPipelineOperationResult> InjectAsync(bool force = false, CancellationToken ct = default);
+    Task<CorpusPipelineOperationResult> InjectAsync(
+        bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        CancellationToken ct = default);
 
-    Task<CorpusFullPipelineResult> RunFullPipelineAsync(bool force = false, CancellationToken ct = default);
+    Task<CorpusFullPipelineResult> RunFullPipelineAsync(
+        bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        CancellationToken ct = default);
 }
 
 public sealed class CorpusSetupService : ICorpusSetupService
@@ -34,9 +41,15 @@ public sealed class CorpusSetupService : ICorpusSetupService
     public Task<CorpusPipelineOperationResult> ExtractAsync(bool force = false, CancellationToken ct = default) =>
         _pipeline.ExtractAsync(force, ct);
 
-    public Task<CorpusPipelineOperationResult> InjectAsync(bool force = false, CancellationToken ct = default) =>
-        _pipeline.InjectAsync(force, ct);
+    public Task<CorpusPipelineOperationResult> InjectAsync(
+        bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        CancellationToken ct = default) =>
+        _pipeline.InjectAsync(force, strategy, ct);
 
-    public Task<CorpusFullPipelineResult> RunFullPipelineAsync(bool force = false, CancellationToken ct = default) =>
-        _pipeline.RunFullPipelineAsync(force, ct);
+    public Task<CorpusFullPipelineResult> RunFullPipelineAsync(
+        bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        CancellationToken ct = default) =>
+        _pipeline.RunFullPipelineAsync(force, strategy, ct);
 }

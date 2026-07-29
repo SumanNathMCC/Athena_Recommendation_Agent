@@ -1,3 +1,4 @@
+using Athena.Ingestion;
 using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
 using Athena.Ingestion.Pipeline;
@@ -13,6 +14,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.Configure<DocumentIntelligenceOptions>(
     builder.Configuration.GetSection(DocumentIntelligenceOptions.SectionName));
+builder.Services.AddAthenaIngestion(builder.Configuration);
 builder.Services.AddSingleton<IDocumentMarkdownExtractor>(sp =>
     new DocumentIntelligenceMarkdownExtractor(
         sp.GetRequiredService<IOptions<DocumentIntelligenceOptions>>().Value));

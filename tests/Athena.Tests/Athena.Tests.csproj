@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Athena.Ingestion\Athena.Ingestion.csproj" />
     <ProjectReference Include="..\..\src\Athena.Retrieval\Athena.Retrieval.csproj" />
     <ProjectReference Include="..\..\src\Athena.Recommendation\Athena.Recommendation.csproj" />
   </ItemGroup>

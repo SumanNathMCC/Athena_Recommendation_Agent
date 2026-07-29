@@ -18,7 +18,12 @@ internal static class CorpusPaths
     public static string GetIngestedPath(string repoRoot, string docId) =>
         Path.Combine(
             ResolveUnderRepo(repoRoot, IngestedDirectory),
-            $"{docId}.json");
+            $"{docId}.md");
+
+    public static string GetIngestedVectorsPath(string repoRoot, string docId) =>
+        Path.Combine(
+            ResolveUnderRepo(repoRoot, IngestedDirectory),
+            $"{docId}.vectors.json");
 
     public static string ResolveUnderRepo(string repoRoot, string relativePath)
     {

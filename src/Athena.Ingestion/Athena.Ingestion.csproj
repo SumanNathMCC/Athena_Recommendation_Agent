@@ -1,18 +1,29 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-	<ItemGroup>
-		<PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\Athena.Core\Athena.Core.csproj" />
-	</ItemGroup>
-
-	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-	</PropertyGroup>
-
-</Project>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" Version="9.0.0-preview.1.25229.1" />
+		<PackageReference Include="Microsoft.SemanticKernel" Version="1.51.0" />
+		<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.51.0" />
+		<PackageReference Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.51.0-preview" />
+		<PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.51.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Athena.Core\Athena.Core.csproj" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+</Project>
+

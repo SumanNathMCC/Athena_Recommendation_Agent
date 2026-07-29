@@ -15,6 +15,18 @@ public sealed class ExtractedMarkdownDocument
 
     public string? ModelId { get; init; }
 
+    public IReadOnlyList<ExtractedMarkdownSection> Sections { get; init; } = [];
+
+    public IReadOnlyList<ExtractedMarkdownBlock> Blocks =>
+        Sections.SelectMany(section => section.Blocks).ToList();
+}
+
+public sealed class ExtractedMarkdownSection
+{
+    public string Header { get; init; } = string.Empty;
+
+    public int StartPage { get; init; }
+
     public IReadOnlyList<ExtractedMarkdownBlock> Blocks { get; init; } = [];
 }
 
@@ -27,10 +39,16 @@ public sealed class ExtractedMarkdownBlock
     public float MeanConfidence { get; init; }
 
     public string Markdown { get; init; } = string.Empty;
+
+    public string SectionHeader { get; init; } = string.Empty;
 }
 
 public static class ExtractedMarkdownParser
 {
+    private static readonly Regex SectionMarkerRegex = new(
+        @"<!--\s*section:\s*header=(?<header>""(?:\\.|[^""\\])*""|[^""\s][^>]*?)\s+startPage=(?<startPage>\d+)\s*-->",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     private static readonly Regex BlockMarkerRegex = new(
         @"<!--\s*block:\s*page=(?<page>\d+)\s+kind=(?<kind>\w+)\s+confidence=(?<confidence>[\d.]+)\s*-->",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -41,7 +59,7 @@ public static class ExtractedMarkdownParser
 
         var (frontMatter, body) = SplitFrontMatter(markdown);
         var metadata = ParseFrontMatter(frontMatter);
-        var blocks = ParseBlocks(body);
+        var sections = ParseSections(body);
 
         return new ExtractedMarkdownDocument
         {
@@ -53,7 +71,7 @@ public static class ExtractedMarkdownParser
                 ? parsedAt
                 : null,
             ModelId = metadata.GetValueOrDefault("modelId"),
-            Blocks = blocks
+            Sections = sections
         };
     }
 
@@ -95,7 +113,52 @@ public static class ExtractedMarkdownParser
         return values;
     }
 
-    private static List<ExtractedMarkdownBlock> ParseBlocks(string body)
+    private static List<ExtractedMarkdownSection> ParseSections(string body)
+    {
+        var sections = new List<ExtractedMarkdownSection>();
+        var sectionMatches = SectionMarkerRegex.Matches(body);
+
+        if (sectionMatches.Count == 0)
+        {
+            var legacyBlocks = ParseBlocks(body, string.Empty);
+            if (legacyBlocks.Count > 0)
+            {
+                sections.Add(new ExtractedMarkdownSection
+                {
+                    Header = string.Empty,
+                    StartPage = legacyBlocks[0].PageNumber,
+                    Blocks = legacyBlocks
+                });
+            }
+
+            return sections;
+        }
+
+        for (var index = 0; index < sectionMatches.Count; index++)
+        {
+            var match = sectionMatches[index];
+            var contentStart = match.Index + match.Length;
+            var contentEnd = index + 1 < sectionMatches.Count
+                ? sectionMatches[index + 1].Index
+                : body.Length;
+
+            var sectionBody = body[contentStart..contentEnd];
+            var header = Unquote(match.Groups["header"].Value);
+            var startPage = int.Parse(match.Groups["startPage"].Value);
+            var blocks = ParseBlocks(sectionBody, header);
+
+            sections.Add(new ExtractedMarkdownSection
+            {
+                Header = header,
+                StartPage = startPage,
+                Blocks = blocks
+            });
+        }
+
+        return sections;
+    }
+
+    private static List<ExtractedMarkdownBlock> ParseBlocks(string body, string sectionHeader)
     {
         var blocks = new List<ExtractedMarkdownBlock>();
         var matches = BlockMarkerRegex.Matches(body);
@@ -109,7 +172,7 @@ public static class ExtractedMarkdownParser
                 : body.Length;
 
             var content = body[contentStart..contentEnd].Trim();
-            content = StripPageHeading(content);
+            content = StripSectionHeadingLine(content);
 
             if (string.IsNullOrWhiteSpace(content))
             {
@@ -121,19 +184,31 @@ public static class ExtractedMarkdownParser
                 PageNumber = int.Parse(match.Groups["page"].Value),
                 Kind = ParseKind(match.Groups["kind"].Value),
                 MeanConfidence = float.Parse(match.Groups["confidence"].Value),
-                Markdown = content
+                Markdown = content,
+                SectionHeader = sectionHeader
             });
         }
 
         return blocks;
     }
 
-    private static string StripPageHeading(string content)
+    private static string StripSectionHeadingLine(string content)
     {
         var lines = content.Split('\n').ToList();
+
         while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0]))
         {
             lines.RemoveAt(0);
+        }
+
+        if (lines.Count > 0 && lines[0].StartsWith("### ", StringComparison.Ordinal))
+        {
+            lines.RemoveAt(0);
+
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0]))
+            {
+                lines.RemoveAt(0);
+            }
         }
 
         if (lines.Count > 0 && lines[0].StartsWith("## Page ", StringComparison.Ordinal))
@@ -147,6 +222,16 @@ public static class ExtractedMarkdownParser
         }
 
         return string.Join(Environment.NewLine, lines).Trim();
+    }
+
+    private static string Unquote(string value)
+    {
+        if (value.Length >= 2 && value.StartsWith('"') && value.EndsWith('"'))
+        {
+            return value[1..^1].Replace("\\\"", "\"", StringComparison.Ordinal);
+        }
+
+        return value;
     }
 
     private static ChunkKind ParseKind(string kind) =>

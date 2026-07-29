@@ -11,41 +11,41 @@ public sealed class DocRecord
     public const int MinTopicCount = 3;
     public const int MaxTopicCount = 6;
 
-    [VectorStoreKey]
+    [VectorStoreRecordKey]
     public string DocId { get; set; } = string.Empty;
 
-    [VectorStoreData]
+    [VectorStoreRecordData]
     public string Title { get; set; } = string.Empty;
 
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreRecordData(IsIndexed = true)]
     public string Cluster { get; set; } = string.Empty;
 
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreRecordData(IsIndexed = true)]
     public DateTimeOffset PublishedOn { get; set; }
 
-    [VectorStoreData]
+    [VectorStoreRecordData]
     public int PageCount { get; set; }
 
     /// <summary>
     /// LLM-generated summary; must not exceed <see cref="MaxSummaryWords"/> words at ingestion time.
     /// </summary>
-    [VectorStoreData(IsFullTextIndexed = true)]
+    [VectorStoreRecordData(IsFullTextIndexed = true)]
     public string Summary { get; set; } = string.Empty;
 
     /// <summary>
     /// Three to six LLM-extracted topic tags.
     /// </summary>
-    [VectorStoreData]
+    [VectorStoreRecordData]
     public IList<string> Topics { get; set; } = [];
 
     /// <summary>
     /// Groups near-duplicate version-lineage documents (e.g. bcbs-op-resilience, ragas).
     /// Null when the document has no lineage pair.
     /// </summary>
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreRecordData(IsIndexed = true)]
     public string? LineageGroup { get; set; }
 
-    [VectorStoreVector(
+    [VectorStoreRecordVector(
         Dimensions: 1536,
         DistanceFunction = DistanceFunction.CosineSimilarity)]
     public ReadOnlyMemory<float> Embedding { get; set; }

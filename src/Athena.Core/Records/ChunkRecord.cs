@@ -7,34 +7,34 @@ namespace Athena.Core.Records;
 /// </summary>
 public sealed class ChunkRecord
 {
-    [VectorStoreKey]
+    [VectorStoreRecordKey]
     public string ChunkId { get; set; } = string.Empty;
 
-    [VectorStoreData(IsFullTextIndexed = true)]
+    [VectorStoreRecordData(IsFullTextIndexed = true)]
     public string Text { get; set; } = string.Empty;
 
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreRecordData(IsIndexed = true)]
     public string DocId { get; set; } = string.Empty;
 
-    [VectorStoreData]
+    [VectorStoreRecordData]
     public string Title { get; set; } = string.Empty;
 
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreRecordData(IsIndexed = true)]
     public int PageNumber { get; set; }
 
-    [VectorStoreData]
+    [VectorStoreRecordData]
     public string Section { get; set; } = string.Empty;
 
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreRecordData(IsIndexed = true)]
     public string Cluster { get; set; } = string.Empty;
 
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreRecordData(IsIndexed = true)]
     public DateTimeOffset PublishedOn { get; set; }
 
-    [VectorStoreData]
+    [VectorStoreRecordData]
     public ChunkKind Kind { get; set; }
 
-    [VectorStoreVector(
+    [VectorStoreRecordVector(
         Dimensions: 1536,
         DistanceFunction = DistanceFunction.CosineSimilarity)]
     public ReadOnlyMemory<float> Embedding { get; set; }

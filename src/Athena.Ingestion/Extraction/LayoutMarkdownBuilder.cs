@@ -7,65 +7,84 @@ namespace Athena.Ingestion.Extraction;
 internal static class LayoutMarkdownBuilder
 {
     private const float OcrConfidenceThreshold = 0.85f;
+    private const string PreambleSectionHeader = "(preamble)";
 
     public static string BuildBody(AnalyzeResult result)
     {
-        var pageNumbers = result.Pages
-            .Select(page => page.PageNumber)
-            .Distinct()
-            .OrderBy(number => number)
+        var layoutItems = CollectLayoutItems(result)
+            .OrderBy(item => item.PageNumber)
+            .ThenBy(item => item.TopY)
             .ToList();
 
+        if (layoutItems.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sections = GroupIntoSections(layoutItems);
         var builder = new StringBuilder();
 
-        foreach (var pageNumber in pageNumbers)
+        foreach (var section in sections)
         {
-            var page = result.Pages.FirstOrDefault(candidate => candidate.PageNumber == pageNumber);
+            AppendSection(builder, section);
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static List<LayoutItem> CollectLayoutItems(AnalyzeResult result)
+    {
+        var items = new List<LayoutItem>();
+
+        foreach (var paragraph in result.Paragraphs)
+        {
+            if (!TryGetPrimaryRegion(paragraph.BoundingRegions, out var region) ||
+                string.IsNullOrWhiteSpace(paragraph.Content))
+            {
+                continue;
+            }
+
+            var page = result.Pages.FirstOrDefault(candidate => candidate.PageNumber == region.PageNumber);
             var pageConfidence = GetPageConfidence(page);
-            var proseKind = pageConfidence < OcrConfidenceThreshold
-                ? "ocrprose"
-                : "prose";
+            var proseKind = pageConfidence < OcrConfidenceThreshold ? "ocrprose" : "prose";
+            var isHeading = IsHeading(paragraph);
 
-            var layoutItems = new List<LayoutItem>();
+            items.Add(new LayoutItem(
+                region.PageNumber,
+                TopY(region),
+                LayoutItemKind.Paragraph,
+                paragraph.Content.Trim(),
+                proseKind,
+                pageConfidence,
+                isHeading));
+        }
 
-            foreach (var paragraph in result.Paragraphs)
+        foreach (var table in result.Tables)
+        {
+            if (!TryGetPrimaryRegion(table.BoundingRegions, out var region))
             {
-                if (!TryGetRegionOnPage(paragraph.BoundingRegions, pageNumber, out var region) ||
-                    string.IsNullOrWhiteSpace(paragraph.Content))
-                {
-                    continue;
-                }
-
-                layoutItems.Add(new LayoutItem(
-                    TopY(region),
-                    LayoutItemKind.Paragraph,
-                    FormatParagraph(paragraph),
-                    proseKind,
-                    pageConfidence));
+                continue;
             }
 
-            foreach (var table in result.Tables)
+            var markdown = TableMarkdownSerializer.ToMarkdown(table);
+            if (string.IsNullOrWhiteSpace(markdown))
             {
-                if (!TryGetRegionOnPage(table.BoundingRegions, pageNumber, out var region))
-                {
-                    continue;
-                }
-
-                var markdown = TableMarkdownSerializer.ToMarkdown(table);
-                if (string.IsNullOrWhiteSpace(markdown))
-                {
-                    continue;
-                }
-
-                layoutItems.Add(new LayoutItem(
-                    TopY(region),
-                    LayoutItemKind.Table,
-                    markdown,
-                    "table",
-                    1.0f));
+                continue;
             }
 
-            if (layoutItems.Count == 0 && page is not null)
+            items.Add(new LayoutItem(
+                region.PageNumber,
+                TopY(region),
+                LayoutItemKind.Table,
+                markdown,
+                "table",
+                1.0f,
+                IsHeading: false));
+        }
+
+        if (items.Count == 0)
+        {
+            foreach (var page in result.Pages.OrderBy(candidate => candidate.PageNumber))
             {
                 var fallbackText = string.Join(
                     Environment.NewLine,
@@ -73,55 +92,93 @@ internal static class LayoutMarkdownBuilder
                         .Select(line => line.Content)
                         .Where(content => !string.IsNullOrWhiteSpace(content)));
 
-                if (!string.IsNullOrWhiteSpace(fallbackText))
+                if (string.IsNullOrWhiteSpace(fallbackText))
                 {
-                    layoutItems.Add(new LayoutItem(
-                        0,
-                        LayoutItemKind.Paragraph,
-                        fallbackText.Trim(),
-                        proseKind,
-                        pageConfidence));
+                    continue;
                 }
-            }
 
-            if (layoutItems.Count == 0)
+                var pageConfidence = GetPageConfidence(page);
+                var proseKind = pageConfidence < OcrConfidenceThreshold ? "ocrprose" : "prose";
+
+                items.Add(new LayoutItem(
+                    page.PageNumber,
+                    0,
+                    LayoutItemKind.Paragraph,
+                    fallbackText.Trim(),
+                    proseKind,
+                    pageConfidence,
+                    IsHeading: false));
+            }
+        }
+
+        return items;
+    }
+
+    private static List<SectionDraft> GroupIntoSections(IReadOnlyList<LayoutItem> items)
+    {
+        var sections = new List<SectionDraft>();
+        SectionDraft? current = null;
+
+        foreach (var item in items)
+        {
+            if (item.IsHeading && item.ItemKind == LayoutItemKind.Paragraph)
             {
+                current = new SectionDraft(item.Content, item.PageNumber);
+                sections.Add(current);
                 continue;
             }
 
-            builder.AppendLine($"## Page {pageNumber}");
-            builder.AppendLine();
-
-            foreach (var item in layoutItems.OrderBy(entry => entry.TopY))
+            current ??= new SectionDraft(PreambleSectionHeader, item.PageNumber);
+            if (!sections.Contains(current))
             {
-                builder.AppendLine(
-                    $"<!-- block: page={pageNumber} kind={item.KindLabel} confidence={item.Confidence:0.###} -->");
+                sections.Add(current);
+            }
 
-                if (item.ItemKind == LayoutItemKind.Table)
-                {
-                    builder.AppendLine();
-                    builder.AppendLine("### Table");
-                    builder.AppendLine();
-                }
+            current.Blocks.Add(item);
+        }
 
-                builder.AppendLine(item.Markdown);
+        if (sections.Count == 0 && current is not null)
+        {
+            sections.Add(current);
+        }
+
+        return sections;
+    }
+
+    private static void AppendSection(StringBuilder builder, SectionDraft section)
+    {
+        var header = section.Header == PreambleSectionHeader ? string.Empty : section.Header;
+
+        builder.AppendLine(
+            $"<!-- section: header={YamlQuoted(header)} startPage={section.StartPage} -->");
+
+        if (!string.IsNullOrWhiteSpace(header))
+        {
+            builder.AppendLine($"### {header}");
+            builder.AppendLine();
+        }
+
+        foreach (var block in section.Blocks)
+        {
+            builder.AppendLine(
+                $"<!-- block: page={block.PageNumber} kind={block.KindLabel} confidence={block.Confidence:0.###} -->");
+
+            if (block.ItemKind == LayoutItemKind.Table)
+            {
+                builder.AppendLine();
+                builder.AppendLine("### Table");
                 builder.AppendLine();
             }
-        }
 
-        return builder.ToString().TrimEnd();
+            builder.AppendLine(block.Content);
+            builder.AppendLine();
+        }
     }
 
-    private static string FormatParagraph(DocumentParagraph paragraph)
-    {
-        if (paragraph.Role == ParagraphRole.SectionHeading ||
-            paragraph.Role == ParagraphRole.Title)
-        {
-            return $"### {paragraph.Content.Trim()}";
-        }
-
-        return paragraph.Content.Trim();
-    }
+    private static bool IsHeading(DocumentParagraph paragraph) =>
+        paragraph.Role == ParagraphRole.SectionHeading ||
+        paragraph.Role == ParagraphRole.Title ||
+        HeadingHeuristics.IsLikelyHeading(paragraph.Content);
 
     private static float GetPageConfidence(DocumentPage? page)
     {
@@ -133,9 +190,8 @@ internal static class LayoutMarkdownBuilder
         return (float)page.Words.Average(word => word.Confidence);
     }
 
-    private static bool TryGetRegionOnPage(
+    private static bool TryGetPrimaryRegion(
         IReadOnlyList<BoundingRegion>? regions,
-        int pageNumber,
         out BoundingRegion region)
     {
         region = default;
@@ -145,8 +201,12 @@ internal static class LayoutMarkdownBuilder
             return false;
         }
 
-        region = regions[0];
-        return region.PageNumber == pageNumber;
+        region = regions
+            .OrderBy(candidate => candidate.PageNumber)
+            .ThenBy(candidate => TopY(candidate))
+            .First();
+
+        return true;
     }
 
     private static float TopY(BoundingRegion region)
@@ -162,12 +222,36 @@ internal static class LayoutMarkdownBuilder
             .Min();
     }
 
+    private static string YamlQuoted(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        return value.Contains('\"', StringComparison.Ordinal) ||
+               value.Contains(':', StringComparison.Ordinal)
+            ? $"\"{value.Replace("\"", "\\\"", StringComparison.Ordinal)}\""
+            : $"\"{value}\"";
+    }
+
+    private sealed class SectionDraft(string header, int startPage)
+    {
+        public string Header { get; } = header;
+
+        public int StartPage { get; } = startPage;
+
+        public List<LayoutItem> Blocks { get; } = [];
+    }
+
     private sealed record LayoutItem(
+        int PageNumber,
         float TopY,
         LayoutItemKind ItemKind,
-        string Markdown,
+        string Content,
         string KindLabel,
-        float Confidence);
+        float Confidence,
+        bool IsHeading);
 
     private enum LayoutItemKind
     {

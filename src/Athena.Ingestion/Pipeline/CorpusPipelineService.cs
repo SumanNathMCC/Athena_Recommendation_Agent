@@ -1,4 +1,5 @@
 using Athena.Core.Corpus;
+using Athena.Ingestion.Chunking;
 using Athena.Ingestion.Fetch;
 
 namespace Athena.Ingestion.Pipeline;
@@ -11,9 +12,15 @@ public interface ICorpusPipelineService
 
     Task<CorpusPipelineOperationResult> ExtractAsync(bool force = false, CancellationToken ct = default);
 
-    Task<CorpusPipelineOperationResult> InjectAsync(bool force = false, CancellationToken ct = default);
+    Task<CorpusPipelineOperationResult> InjectAsync(
+        bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        CancellationToken ct = default);
 
-    Task<CorpusFullPipelineResult> RunFullPipelineAsync(bool force = false, CancellationToken ct = default);
+    Task<CorpusFullPipelineResult> RunFullPipelineAsync(
+        bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        CancellationToken ct = default);
 }
 
 public sealed record CorpusFullPipelineResult(
@@ -65,16 +72,18 @@ public sealed class CorpusPipelineService : ICorpusPipelineService
 
     public Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         CancellationToken ct = default) =>
-        _injector.InjectAsync(_repoRoot, force, ct);
+        _injector.InjectAsync(_repoRoot, force, strategy, ct);
 
     public async Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
+        ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         CancellationToken ct = default)
     {
         var fetch = await FetchAsync(force, ct);
         var extract = await ExtractAsync(force, ct);
-        var inject = await InjectAsync(force, ct);
+        var inject = await InjectAsync(force, strategy, ct);
         var status = await GetStatusAsync(ct);
 
         return new CorpusFullPipelineResult(fetch, extract, inject, status);
