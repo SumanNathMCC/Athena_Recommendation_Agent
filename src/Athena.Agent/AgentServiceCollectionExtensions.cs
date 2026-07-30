@@ -1,4 +1,5 @@
 using Athena.Plugins;
+using Athena.Retrieval;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
@@ -10,17 +11,18 @@ public static class AgentServiceCollectionExtensions
 {
     public static IServiceCollection AddAthenaAgent(this IServiceCollection services)
     {
-        services.AddSingleton<SearchPlugin>();
-        services.AddSingleton<ChatCompletionAgent>(sp =>
+        // Scoped so SearchPlugin shares the circuit's IRetrievedContextAccessor with the chat UI.
+        services.AddScoped<SearchPlugin>();
+        services.AddScoped<ChatCompletionAgent>(sp =>
         {
-            var kernel = sp.GetRequiredService<SkKernel>();
+            var rootKernel = sp.GetRequiredService<SkKernel>();
             var searchPlugin = sp.GetRequiredService<SearchPlugin>();
-            if (!kernel.Plugins.Contains("Search"))
-            {
-                kernel.Plugins.AddFromObject(searchPlugin, pluginName: "Search");
-            }
 
-            return AthenaAgentFactory.Create(kernel);
+            // Fresh kernel per circuit so plugin instances are not shared across users.
+            var agentKernel = new SkKernel(rootKernel.Services);
+            agentKernel.Plugins.AddFromObject(searchPlugin, pluginName: "Search");
+
+            return AthenaAgentFactory.Create(agentKernel);
         });
 
         return services;

@@ -1,53 +1,104 @@
 @page "/"
 @rendermode InteractiveServer
 @using Athena.Agent
+@using Athena.Retrieval
 @inject AthenaChatSession ChatSession
 
 <PageTitle>Athena</PageTitle>
 
-<div class="chat-shell">
-    <header class="chat-header">
-        <h1>Athena</h1>
-        <p class="text-muted mb-0">Research librarian — grounded answers from retrieved corpus passages.</p>
-    </header>
+<div class="chat-layout">
+    <div class="chat-shell">
+        <header class="chat-header">
+            <h1>Athena</h1>
+            <p class="text-muted mb-0">Research librarian — grounded answers from retrieved corpus passages.</p>
+        </header>
 
-    <section class="chat-messages" aria-live="polite">
-        @foreach (var message in _messages)
-        {
-            <div class="chat-message @message.Role">
-                <div class="chat-bubble">
-                    <strong>@(message.Role == ChatRole.User ? "You" : "Athena")</strong>
-                    <p style="white-space: pre-wrap">@message.Text</p>
+        <section class="chat-messages" aria-live="polite">
+            @foreach (var message in _messages)
+            {
+                <div class="chat-message @message.Role">
+                    <div class="chat-bubble">
+                        <strong>@(message.Role == ChatRole.User ? "You" : "Athena")</strong>
+                        <p style="white-space: pre-wrap">@message.Text</p>
+                    </div>
                 </div>
-            </div>
-        }
+            }
+            @if (_isBusy)
+            {
+                <div class="chat-message assistant">
+                    <div class="chat-bubble">
+                        <strong>Athena</strong>
+                        <p class="text-muted mb-0">Searching the corpus…</p>
+                    </div>
+                </div>
+            }
+        </section>
+
+        <form class="chat-input-row" @onsubmit="SendMessage" @onsubmit:preventDefault="true">
+            <input class="form-control"
+                   placeholder="Ask about the research library…"
+                   @bind="_draft"
+                   disabled="@_isBusy"
+                   aria-label="Message" />
+            <button class="btn btn-primary" type="submit" disabled="@_isBusy || string.IsNullOrWhiteSpace(_draft)">
+                Send
+            </button>
+        </form>
+
+        <p class="chat-hint text-muted">
+            Answers use hybrid retrieval over injected chunks. Ensure documents are Injected on
+            <a href="corpus">Corpus setup</a>
+            (re-inject after app restart — vectors are in-memory).
+        </p>
+    </div>
+
+    <aside class="retrieval-sidebar" aria-label="Retrieved chunks">
+        <header class="retrieval-sidebar-header">
+            <h2>Retrieved chunks</h2>
+            <p class="text-muted mb-0">
+                Final passages after dense + lexical + RRF + rerank
+                @if (_passages.Count > 0)
+                {
+                    <span>(@_passages.Count)</span>
+                }
+            </p>
+        </header>
+
         @if (_isBusy)
         {
-            <div class="chat-message assistant">
-                <div class="chat-bubble">
-                    <strong>Athena</strong>
-                    <p class="text-muted mb-0">Searching the corpus…</p>
-                </div>
-            </div>
+            <p class="text-muted retrieval-empty">Retrieving…</p>
         }
-    </section>
-
-    <form class="chat-input-row" @onsubmit="SendMessage" @onsubmit:preventDefault="true">
-        <input class="form-control"
-               placeholder="Ask about the research library…"
-               @bind="_draft"
-               disabled="@_isBusy"
-               aria-label="Message" />
-        <button class="btn btn-primary" type="submit" disabled="@_isBusy || string.IsNullOrWhiteSpace(_draft)">
-            Send
-        </button>
-    </form>
-
-    <p class="chat-hint text-muted">
-        Answers use hybrid retrieval over injected chunks. Ensure documents are Injected on
-        <a href="corpus">Corpus setup</a>
-        (re-inject after app restart — vectors are in-memory).
-    </p>
+        else if (_passages.Count == 0)
+        {
+            <p class="text-muted retrieval-empty">
+                No chunks yet. Ask a corpus question and the passages used for the answer will appear here.
+            </p>
+        }
+        else
+        {
+            <ol class="retrieval-list">
+                @foreach (var passage in _passages)
+                {
+                    <li class="retrieval-card">
+                        <div class="retrieval-card-meta">
+                            <span class="retrieval-title">@passage.Title</span>
+                            <span class="retrieval-badges">
+                                <span class="badge text-bg-secondary">@passage.DocId</span>
+                                <span class="badge text-bg-light border">p.@passage.PageNumber</span>
+                                <span class="badge text-bg-light border">score @passage.Score.ToString("F3")</span>
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(passage.Section))
+                        {
+                            <div class="retrieval-section text-muted">@passage.Section</div>
+                        }
+                        <p class="retrieval-text">@passage.Text</p>
+                        <div class="retrieval-chunk-id text-muted">@passage.ChunkId</div>
+                    </li>
+                }
+            </ol>
+        }
+    </aside>
 </div>
 
 @code {
@@ -58,6 +109,7 @@
             "Inject documents on the Corpus page first if you have not already.")
     ];
 
+    private readonly List<Passage> _passages = [];
     private string _draft = string.Empty;
     private bool _isBusy;
 
@@ -71,11 +123,13 @@
         var userText = _draft.Trim();
         _draft = string.Empty;
         _messages.Add(new ChatMessage(ChatRole.User, userText));
+        _passages.Clear();
         _isBusy = true;
         try
         {
-            var reply = await ChatSession.SendAsync(userText);
+            var (reply, passages) = await ChatSession.SendAsync(userText);
             _messages.Add(new ChatMessage(ChatRole.Assistant, reply));
+            _passages.AddRange(passages);
         }
         catch (Exception ex)
         {

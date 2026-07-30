@@ -1,3 +1,4 @@
+using Athena.Retrieval;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -10,19 +11,27 @@ namespace Athena.Agent;
 public sealed class AthenaChatSession
 {
     private readonly ChatCompletionAgent _agent;
+    private readonly IRetrievedContextAccessor _retrievedContext;
     private readonly ChatHistoryAgentThread _thread = new();
 
-    public AthenaChatSession(ChatCompletionAgent agent)
+    public AthenaChatSession(
+        ChatCompletionAgent agent,
+        IRetrievedContextAccessor retrievedContext)
     {
         _agent = agent;
+        _retrievedContext = retrievedContext;
     }
 
-    public async Task<string> SendAsync(string userMessage, CancellationToken ct = default)
+    public async Task<(string Reply, IReadOnlyList<Passage> Passages)> SendAsync(
+        string userMessage,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(userMessage))
         {
-            return string.Empty;
+            return (string.Empty, Array.Empty<Passage>());
         }
+
+        _retrievedContext.Clear();
 
         var sb = new System.Text.StringBuilder();
         await foreach (var item in _agent.InvokeAsync(
@@ -38,8 +47,12 @@ public sealed class AthenaChatSession
         }
 
         var text = sb.ToString().Trim();
-        return string.IsNullOrWhiteSpace(text)
-            ? "I could not produce a reply. Ensure the corpus is injected and Azure Foundry is configured."
-            : text;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            text = "I could not produce a reply. Ensure the corpus is injected and Azure Foundry is configured.";
+        }
+
+        IReadOnlyList<Passage> passages = _retrievedContext.LastPassages.ToList();
+        return (text, passages);
     }
 }

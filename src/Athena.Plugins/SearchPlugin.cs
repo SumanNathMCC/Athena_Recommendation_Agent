@@ -13,11 +13,16 @@ namespace Athena.Plugins;
 public sealed class SearchPlugin
 {
     private readonly IHybridRetriever _hybridRetriever;
+    private readonly IRetrievedContextAccessor _retrievedContext;
     private readonly SkKernel _kernel;
 
-    public SearchPlugin(IHybridRetriever hybridRetriever, SkKernel kernel)
+    public SearchPlugin(
+        IHybridRetriever hybridRetriever,
+        IRetrievedContextAccessor retrievedContext,
+        SkKernel kernel)
     {
         _hybridRetriever = hybridRetriever;
+        _retrievedContext = retrievedContext;
         _kernel = kernel;
     }
 
@@ -35,6 +40,8 @@ public sealed class SearchPlugin
         var passages = await _hybridRetriever
             .RetrieveAsync(query, topK <= 0 ? 6 : topK, NormalizeDocId(docId), cancellationToken)
             .ConfigureAwait(false);
+
+        _retrievedContext.Set(passages, query);
 
         if (passages.Count == 0)
         {
@@ -68,6 +75,8 @@ public sealed class SearchPlugin
         var passages = await _hybridRetriever
             .RetrieveAsync(question, HybridRetriever.DefaultTopK, NormalizeDocId(docId), cancellationToken)
             .ConfigureAwait(false);
+
+        _retrievedContext.Set(passages, question);
 
         if (passages.Count == 0)
         {

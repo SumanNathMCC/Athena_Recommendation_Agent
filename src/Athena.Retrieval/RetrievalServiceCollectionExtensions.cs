@@ -13,6 +13,7 @@ public static class RetrievalServiceCollectionExtensions
         services.AddSingleton<ILexicalRetriever, LuceneLexicalRetriever>();
         services.AddSingleton<IReranker, LlmReranker>();
         services.AddSingleton<IHybridRetriever, HybridRetriever>();
+        services.AddScoped<IRetrievedContextAccessor, RetrievedContextAccessor>();
         return services;
     }
 }
