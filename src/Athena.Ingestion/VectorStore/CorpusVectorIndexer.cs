@@ -9,6 +9,12 @@ public interface ICorpusVectorIndexer
 {
     Task<bool> IsDocumentIndexedAsync(string docId, CancellationToken ct = default);
 
+    Task UpsertRecordsAsync(
+        IReadOnlyList<ChunkRecord> chunkRecords,
+        DocRecord docRecord,
+        bool replaceExisting,
+        CancellationToken ct = default);
+
     Task UpsertDocumentAsync(
         DocumentMetadata metadata,
         DocumentSummaryResult summary,
@@ -35,6 +41,31 @@ public sealed class CorpusVectorIndexer : ICorpusVectorIndexer
         return await docCollection.GetAsync(docId, cancellationToken: ct).ConfigureAwait(false) is not null;
     }
 
+    public async Task UpsertRecordsAsync(
+        IReadOnlyList<ChunkRecord> chunkRecords,
+        DocRecord docRecord,
+        bool replaceExisting,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(chunkRecords);
+        ArgumentNullException.ThrowIfNull(docRecord);
+
+        var chunkCollection = await _vectorStore.GetChunkCollectionAsync(ct);
+        var docCollection = await _vectorStore.GetDocumentCollectionAsync(ct);
+
+        if (replaceExisting)
+        {
+            await RemoveExistingDocumentAsync(docRecord.DocId, chunkCollection, docCollection, ct);
+        }
+
+        if (chunkRecords.Count > 0)
+        {
+            await chunkCollection.UpsertAsync(chunkRecords, ct);
+        }
+
+        await docCollection.UpsertAsync(docRecord, ct);
+    }
+
     public async Task UpsertDocumentAsync(
         DocumentMetadata metadata,
         DocumentSummaryResult summary,
@@ -50,19 +81,9 @@ public sealed class CorpusVectorIndexer : ICorpusVectorIndexer
             throw new InvalidOperationException("Chunk, id, and embedding counts must match.");
         }
 
-        var chunkCollection = await _vectorStore.GetChunkCollectionAsync(ct);
-        var docCollection = await _vectorStore.GetDocumentCollectionAsync(ct);
-
-        if (replaceExisting)
-        {
-            await RemoveExistingDocumentAsync(metadata.DocId, chunkCollection, docCollection, ct);
-        }
-
         var chunkRecords = BuildChunkRecords(metadata, chunks, chunkIds, chunkEmbeddings);
-        await chunkCollection.UpsertAsync(chunkRecords, ct);
-
         var docRecord = BuildDocRecord(metadata, summary, docEmbedding);
-        await docCollection.UpsertAsync(docRecord, ct);
+        await UpsertRecordsAsync(chunkRecords, docRecord, replaceExisting, ct);
     }
 
     private static async Task RemoveExistingDocumentAsync(
@@ -85,7 +106,7 @@ public sealed class CorpusVectorIndexer : ICorpusVectorIndexer
         }
     }
 
-    private static List<ChunkRecord> BuildChunkRecords(
+    internal static List<ChunkRecord> BuildChunkRecords(
         DocumentMetadata metadata,
         IReadOnlyList<ChunkDraft> chunks,
         IReadOnlyList<string> chunkIds,
@@ -115,10 +136,10 @@ public sealed class CorpusVectorIndexer : ICorpusVectorIndexer
         return records;
     }
 
-    private static DocRecord BuildDocRecord(
+    internal static DocRecord BuildDocRecord(
         DocumentMetadata metadata,
         DocumentSummaryResult summary,
-        ReadOnlyMemory<float> docEmbedding) =>
+        ReadOnlyMemory<float> docEmbedding = default) =>
         new()
         {
             DocId = metadata.DocId,

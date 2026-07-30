@@ -1,6 +1,7 @@
 using Athena.Core.Corpus;
 using Athena.Core.Records;
 using Athena.Ingestion.Chunking;
+using Athena.Ingestion.DocVectors;
 using Athena.Ingestion.Embeddings;
 using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
@@ -16,6 +17,7 @@ public interface ICorpusInjector
         string repoRoot,
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default);
 }
 
@@ -25,6 +27,7 @@ public sealed class CorpusInjector : ICorpusInjector
     private readonly IChunkerFactory _chunkerFactory;
     private readonly IDocumentSummariser _summariser;
     private readonly ICorpusEmbeddingService _embeddingService;
+    private readonly IDocumentVectorStrategyFactory _docVectorFactory;
     private readonly ICorpusVectorIndexer _vectorIndexer;
     private readonly AzureFoundryOptions _azureOptions;
 
@@ -33,6 +36,7 @@ public sealed class CorpusInjector : ICorpusInjector
         IChunkerFactory chunkerFactory,
         IDocumentSummariser summariser,
         ICorpusEmbeddingService embeddingService,
+        IDocumentVectorStrategyFactory docVectorFactory,
         ICorpusVectorIndexer vectorIndexer,
         IOptions<AzureFoundryOptions> azureOptions)
     {
@@ -40,6 +44,7 @@ public sealed class CorpusInjector : ICorpusInjector
         _chunkerFactory = chunkerFactory;
         _summariser = summariser;
         _embeddingService = embeddingService;
+        _docVectorFactory = docVectorFactory;
         _vectorIndexer = vectorIndexer;
         _azureOptions = azureOptions.Value;
     }
@@ -48,6 +53,7 @@ public sealed class CorpusInjector : ICorpusInjector
         string repoRoot,
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default)
     {
         EnsureAzureFoundryConfigured();
@@ -58,6 +64,9 @@ public sealed class CorpusInjector : ICorpusInjector
         var documents = CorpusDocumentCatalog.GetAllDocuments(manifest);
         var manifestById = manifest.Documents.ToDictionary(document => document.DocId, StringComparer.OrdinalIgnoreCase);
         var chunker = _chunkerFactory.GetChunker(strategy);
+        var docVector = documentVectorStrategy is null
+            ? _docVectorFactory.GetDefaultStrategy()
+            : _docVectorFactory.GetStrategy(documentVectorStrategy.Value);
         var statuses = new List<CorpusDocPipelineStatus>();
 
         foreach (var entry in documents)
@@ -108,6 +117,7 @@ public sealed class CorpusInjector : ICorpusInjector
                         manifestById,
                         pdfPath,
                         entry.DocId,
+                        docVector,
                         ct);
 
                     statuses.Add(new CorpusDocPipelineStatus(
@@ -118,7 +128,7 @@ public sealed class CorpusInjector : ICorpusInjector
                         extractStatus,
                         PipelineStageStatus.Succeeded,
                         InjectMessage:
-                            $"Reloaded {reloaded.ChunkCount} chunk vector(s) into Semantic Kernel in-memory store."));
+                            $"Reloaded {reloaded.ChunkCount} chunk vector(s) into SK in-memory store ({docVector.Name})."));
                     continue;
                 }
                 catch (Exception ex)
@@ -159,22 +169,22 @@ public sealed class CorpusInjector : ICorpusInjector
                     .Select((chunk, index) => ChunkedMarkdownWriter.BuildChunkId(metadata.DocId, chunk, index))
                     .ToList();
 
-                var chunkTexts = chunkDrafts.Select(chunk => chunk.Text).ToList();
-                var chunkEmbeddings = await _embeddingService.EmbedBatchAsync(chunkTexts, ct);
-                var docEmbedding = await _embeddingService.EmbedAsync(summary.Summary, ct);
+                var chunkEmbeddings = await _embeddingService.EmbedBatchAsync(
+                    chunkDrafts.Select(chunk => chunk.Text).ToList(),
+                    ct);
 
-                var chunkedMarkdown = ChunkedMarkdownWriter.Write(metadata, chunker.Name, summary, chunkDrafts);
-
-                await File.WriteAllTextAsync(ingestedPath, chunkedMarkdown, ct);
-                await _vectorIndexer.UpsertDocumentAsync(
+                var chunkRecords = CorpusVectorIndexer.BuildChunkRecords(
                     metadata,
-                    summary,
                     chunkDrafts,
                     chunkIds,
-                    chunkEmbeddings,
-                    docEmbedding,
-                    replaceExisting: force,
-                    ct);
+                    chunkEmbeddings);
+
+                var docRecord = CorpusVectorIndexer.BuildDocRecord(metadata, summary);
+                docRecord.Embedding = await docVector.BuildAsync(docRecord, chunkRecords, ct);
+
+                var chunkedMarkdown = ChunkedMarkdownWriter.Write(metadata, chunker.Name, summary, chunkDrafts);
+                await File.WriteAllTextAsync(ingestedPath, chunkedMarkdown, ct);
+                await _vectorIndexer.UpsertRecordsAsync(chunkRecords, docRecord, replaceExisting: force, ct);
 
                 statuses.Add(new CorpusDocPipelineStatus(
                     entry.DocId,
@@ -184,7 +194,7 @@ public sealed class CorpusInjector : ICorpusInjector
                     extractStatus,
                     PipelineStageStatus.Succeeded,
                     InjectMessage:
-                        $"{chunkDrafts.Count} chunk(s) via {chunker.Name}; summary + embeddings stored in SK in-memory vector store."));
+                        $"{chunkDrafts.Count} chunk(s) via {chunker.Name}; doc vector={docVector.Name}."));
             }
             catch (Exception ex)
             {
@@ -207,6 +217,7 @@ public sealed class CorpusInjector : ICorpusInjector
         IReadOnlyDictionary<string, CorpusDocument> manifestById,
         string pdfPath,
         string docId,
+        IDocumentVectorStrategy docVector,
         CancellationToken ct)
     {
         var markdown = await File.ReadAllTextAsync(ingestedPath, ct);
@@ -238,19 +249,20 @@ public sealed class CorpusInjector : ICorpusInjector
             })
             .ToList();
         var chunkIds = parsed.Chunks.Select(chunk => chunk.ChunkId).ToList();
-        var chunkTexts = chunkDrafts.Select(chunk => chunk.Text).ToList();
-        var chunkEmbeddings = await _embeddingService.EmbedBatchAsync(chunkTexts, ct);
-        var docEmbedding = await _embeddingService.EmbedAsync(summary.Summary, ct);
+        var chunkEmbeddings = await _embeddingService.EmbedBatchAsync(
+            chunkDrafts.Select(chunk => chunk.Text).ToList(),
+            ct);
 
-        await _vectorIndexer.UpsertDocumentAsync(
+        var chunkRecords = CorpusVectorIndexer.BuildChunkRecords(
             metadata,
-            summary,
             chunkDrafts,
             chunkIds,
-            chunkEmbeddings,
-            docEmbedding,
-            replaceExisting: true,
-            ct);
+            chunkEmbeddings);
+
+        var docRecord = CorpusVectorIndexer.BuildDocRecord(metadata, summary);
+        docRecord.Embedding = await docVector.BuildAsync(docRecord, chunkRecords, ct);
+
+        await _vectorIndexer.UpsertRecordsAsync(chunkRecords, docRecord, replaceExisting: true, ct);
 
         return (chunkDrafts.Count, docId);
     }

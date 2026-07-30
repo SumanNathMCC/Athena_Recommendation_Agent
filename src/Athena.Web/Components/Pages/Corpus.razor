@@ -63,6 +63,8 @@
             <strong>in-memory vector store</strong> (<code>chunks</code> and <code>documents</code> collections).
             Requires <code>AzureFoundry</code> settings (endpoint, API key, chat + embedding deployments)
             for LLM summary and embeddings via Semantic Kernel.
+            Document vectors use the configured <code>DocumentVector:Strategy</code>
+            (Summary / Centroid / Composite).
         </p>
         <div class="mb-3">
             <label class="form-label" for="chunkingStrategy">Chunking strategy</label>
@@ -72,6 +74,17 @@
                     @bind="_chunkingStrategy">
                 <option value="@ChunkingStrategy.SectionAware">Section-aware (default)</option>
                 <option value="@ChunkingStrategy.FixedWindow">Fixed window (1000 tokens, 20% overlap)</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="docVectorStrategy">Document vector strategy</label>
+            <select id="docVectorStrategy"
+                    class="form-select"
+                    disabled="@_isRunning"
+                    @bind="_docVectorStrategy">
+                <option value="@DocumentVectorStrategyKind.Summary">Summary embedding (default)</option>
+                <option value="@DocumentVectorStrategyKind.Centroid">Centroid of chunk embeddings</option>
+                <option value="@DocumentVectorStrategyKind.Composite">Composite (title + topics + summary)</option>
             </select>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -183,6 +196,7 @@ else
     private string? _summary;
     private Operation _currentOperation = Operation.None;
     private ChunkingStrategy _chunkingStrategy = ChunkingStrategy.SectionAware;
+    private DocumentVectorStrategyKind _docVectorStrategy = DocumentVectorStrategyKind.Summary;
     private List<CorpusDocPipelineStatus> _documents = [];
 
     protected override async Task OnInitializedAsync()
@@ -243,7 +257,7 @@ else
             force ? Operation.InjectForce : Operation.Inject,
             async () =>
             {
-                var result = await CorpusSetupService.InjectAsync(force, _chunkingStrategy);
+                var result = await CorpusSetupService.InjectAsync(force, _chunkingStrategy, _docVectorStrategy);
                 _summary = $"Inject — succeeded: {result.Succeeded}, skipped: {result.Skipped}, failed: {result.Failed}";
                 _statusMessage = result.IsSuccess
                     ? "Injection staging completed successfully."
@@ -257,7 +271,7 @@ else
             Operation.FullPipeline,
             async () =>
             {
-                var result = await CorpusSetupService.RunFullPipelineAsync(force: true, _chunkingStrategy);
+                var result = await CorpusSetupService.RunFullPipelineAsync(force: true, _chunkingStrategy, _docVectorStrategy);
                 _summary =
                     $"Full pipeline — download failed: {result.Fetch.Failed}, " +
                     $"extract failed: {result.Extract.Failed}, inject failed: {result.Inject.Failed}";

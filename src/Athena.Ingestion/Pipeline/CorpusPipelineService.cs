@@ -1,5 +1,6 @@
 using Athena.Core.Corpus;
 using Athena.Ingestion.Chunking;
+using Athena.Ingestion.DocVectors;
 using Athena.Ingestion.Fetch;
 
 namespace Athena.Ingestion.Pipeline;
@@ -15,11 +16,13 @@ public interface ICorpusPipelineService
     Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default);
 
     Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default);
 }
 
@@ -73,17 +76,19 @@ public sealed class CorpusPipelineService : ICorpusPipelineService
     public Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default) =>
-        _injector.InjectAsync(_repoRoot, force, strategy, ct);
+        _injector.InjectAsync(_repoRoot, force, strategy, documentVectorStrategy, ct);
 
     public async Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default)
     {
         var fetch = await FetchAsync(force, ct);
         var extract = await ExtractAsync(force, ct);
-        var inject = await InjectAsync(force, strategy, ct);
+        var inject = await InjectAsync(force, strategy, documentVectorStrategy, ct);
         var status = await GetStatusAsync(ct);
 
         return new CorpusFullPipelineResult(fetch, extract, inject, status);

@@ -1,5 +1,6 @@
 using Athena.Core.Corpus;
 using Athena.Ingestion.Chunking;
+using Athena.Ingestion.DocVectors;
 using Athena.Ingestion.Pipeline;
 
 namespace Athena.Web.Services;
@@ -15,11 +16,13 @@ public interface ICorpusSetupService
     Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default);
 
     Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default);
 }
 
@@ -44,12 +47,14 @@ public sealed class CorpusSetupService : ICorpusSetupService
     public Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default) =>
-        _pipeline.InjectAsync(force, strategy, ct);
+        _pipeline.InjectAsync(force, strategy, documentVectorStrategy, ct);
 
     public Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
+        DocumentVectorStrategyKind? documentVectorStrategy = null,
         CancellationToken ct = default) =>
-        _pipeline.RunFullPipelineAsync(force, strategy, ct);
+        _pipeline.RunFullPipelineAsync(force, strategy, documentVectorStrategy, ct);
 }
