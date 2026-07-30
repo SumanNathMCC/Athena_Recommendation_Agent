@@ -1,5 +1,6 @@
 using System.Text;
 using System.ComponentModel;
+using Athena.Plugins.Prompts;
 using Athena.Retrieval;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -8,10 +9,12 @@ using SkKernel = Microsoft.SemanticKernel.Kernel;
 namespace Athena.Plugins;
 
 /// <summary>
-/// Thin Semantic Kernel plugin over hybrid retrieval (Part B) and light Q&amp;A (Part C later).
+/// Thin Semantic Kernel plugin over hybrid retrieval (Part B) and grounded answering (Part C).
 /// </summary>
 public sealed class SearchPlugin
 {
+    public const string InsufficientContext = "INSUFFICIENT_CONTEXT";
+
     private readonly IHybridRetriever _hybridRetriever;
     private readonly IRetrievedContextAccessor _retrievedContext;
     private readonly SkKernel _kernel;
@@ -66,6 +69,7 @@ public sealed class SearchPlugin
     [Description(
         "Answer a factual question using retrieved passages from the research corpus. " +
         "Call this for questions about papers, principles, methods, or document contents. " +
+        "Every factual claim must be cited as [Title, p.N]. " +
         "Do not use for open-ended reading recommendations.")]
     public async Task<string> AnswerQuestionAsync(
         [Description("The user's question")] string question,
@@ -80,25 +84,19 @@ public sealed class SearchPlugin
 
         if (passages.Count == 0)
         {
-            return "INSUFFICIENT_CONTEXT";
+            return InsufficientContext;
         }
 
         var context = FormatContext(passages);
+        var prompt = AnswerPromptLoader.Render(question, context);
         var chat = _kernel.GetRequiredService<IChatCompletionService>();
         var history = new ChatHistory();
-        history.AddSystemMessage(
-            """
-            You are Athena, a research librarian. Answer ONLY using the provided CONTEXT passages.
-            Prefer citing sources as [Title, p.N] after factual claims.
-            If the context does not support an answer, reply exactly: INSUFFICIENT_CONTEXT
-            Do not invent facts outside the context.
-            """);
-        history.AddUserMessage($"CONTEXT:\n{context}\n\nQUESTION:\n{question}");
+        history.AddUserMessage(prompt);
 
         var response = await chat.GetChatMessageContentAsync(history, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         var answer = response.Content?.Trim();
-        return string.IsNullOrWhiteSpace(answer) ? "INSUFFICIENT_CONTEXT" : answer;
+        return string.IsNullOrWhiteSpace(answer) ? InsufficientContext : answer;
     }
 
     private static string? NormalizeDocId(string? docId) =>

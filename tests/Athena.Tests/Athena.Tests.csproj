@@ -22,6 +22,8 @@
     <ProjectReference Include="..\..\src\Athena.Ingestion\Athena.Ingestion.csproj" />
     <ProjectReference Include="..\..\src\Athena.Retrieval\Athena.Retrieval.csproj" />
     <ProjectReference Include="..\..\src\Athena.Recommendation\Athena.Recommendation.csproj" />
+    <ProjectReference Include="..\..\src\Athena.Plugins\Athena.Plugins.csproj" />
+    <ProjectReference Include="..\..\src\Athena.Filters\Athena.Filters.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
 using Athena.Agent;
+using Athena.Filters;
 using Athena.Ingestion;
 using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
@@ -18,6 +19,10 @@ builder.Services.Configure<DocumentIntelligenceOptions>(
     builder.Configuration.GetSection(DocumentIntelligenceOptions.SectionName));
 builder.Services.AddAthenaIngestion(builder.Configuration);
 builder.Services.AddAthenaRetrieval();
+
+var repoRootForLogs = RepoRootLocator.Find(builder.Environment.ContentRootPath);
+builder.Services.AddAthenaFilters(
+    Path.Combine(repoRootForLogs, "logs", "citation-violations.jsonl"));
 builder.Services.AddAthenaAgent();
 builder.Services.AddScoped<AthenaChatSession>();
 

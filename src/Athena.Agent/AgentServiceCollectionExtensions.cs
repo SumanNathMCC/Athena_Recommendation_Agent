@@ -1,5 +1,5 @@
+using Athena.Filters.Grounding;
 using Athena.Plugins;
-using Athena.Retrieval;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
@@ -21,6 +21,7 @@ public static class AgentServiceCollectionExtensions
             // Fresh kernel per circuit so plugin instances are not shared across users.
             var agentKernel = new SkKernel(rootKernel.Services);
             agentKernel.Plugins.AddFromObject(searchPlugin, pluginName: "Search");
+            agentKernel.FunctionInvocationFilters.Add(sp.GetRequiredService<GroundingGuardFilter>());
 
             return AthenaAgentFactory.Create(agentKernel);
         });
