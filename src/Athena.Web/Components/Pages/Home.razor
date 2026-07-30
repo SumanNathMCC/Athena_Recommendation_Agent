@@ -88,9 +88,9 @@
                         <div class="retrieval-card-meta">
                             <span class="retrieval-title">@passage.Title</span>
                             <span class="retrieval-badges">
-                                <span class="badge text-bg-secondary">@passage.DocId</span>
-                                <span class="badge text-bg-light border">p.@passage.PageNumber</span>
-                                <span class="badge text-bg-light border">score @passage.Score.ToString("F3")</span>
+                                <span class="retrieval-chip">@passage.DocId</span>
+                                <span class="retrieval-chip">p.@passage.PageNumber</span>
+                                <span class="retrieval-chip">score @passage.Score.ToString("F3")</span>
                             </span>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(passage.Section))
