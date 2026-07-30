@@ -1,3 +1,4 @@
+using Athena.Core.Indexing;
 using Athena.Core.Records;
 using Athena.Ingestion.Chunking;
 using Athena.Ingestion.Summarization;
@@ -29,10 +30,14 @@ public interface ICorpusVectorIndexer
 public sealed class CorpusVectorIndexer : ICorpusVectorIndexer
 {
     private readonly CorpusVectorStore _vectorStore;
+    private readonly IChunkIndexSync? _chunkIndexSync;
 
-    public CorpusVectorIndexer(CorpusVectorStore vectorStore)
+    public CorpusVectorIndexer(
+        CorpusVectorStore vectorStore,
+        IChunkIndexSync? chunkIndexSync = null)
     {
         _vectorStore = vectorStore;
+        _chunkIndexSync = chunkIndexSync;
     }
 
     public async Task<bool> IsDocumentIndexedAsync(string docId, CancellationToken ct = default)
@@ -56,11 +61,13 @@ public sealed class CorpusVectorIndexer : ICorpusVectorIndexer
         if (replaceExisting)
         {
             await RemoveExistingDocumentAsync(docRecord.DocId, chunkCollection, docCollection, ct);
+            _chunkIndexSync?.RemoveByDocId(docRecord.DocId);
         }
 
         if (chunkRecords.Count > 0)
         {
             await chunkCollection.UpsertAsync(chunkRecords, ct);
+            _chunkIndexSync?.Upsert(chunkRecords);
         }
 
         await docCollection.UpsertAsync(docRecord, ct);

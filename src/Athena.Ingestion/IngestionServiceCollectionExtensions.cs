@@ -46,7 +46,10 @@ public static class IngestionServiceCollectionExtensions
         services.AddSingleton<CompositeStrategy>();
         services.AddSingleton<IDocumentVectorStrategyFactory, DocumentVectorStrategyFactory>();
         services.AddSingleton<CorpusVectorStore>();
-        services.AddSingleton<ICorpusVectorIndexer, CorpusVectorIndexer>();
+        services.AddSingleton<ICorpusVectorIndexer>(sp =>
+            new CorpusVectorIndexer(
+                sp.GetRequiredService<CorpusVectorStore>(),
+                sp.GetService<Core.Indexing.IChunkIndexSync>()));
         services.AddSingleton<IngestionPipeline>();
 
         return services;

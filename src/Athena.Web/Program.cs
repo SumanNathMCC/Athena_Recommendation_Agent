@@ -1,7 +1,9 @@
+using Athena.Agent;
 using Athena.Ingestion;
 using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
 using Athena.Ingestion.Pipeline;
+using Athena.Retrieval;
 using Athena.Web.Components;
 using Athena.Web.Services;
 using Microsoft.Extensions.Options;
@@ -15,6 +17,10 @@ builder.Services.AddRazorComponents()
 builder.Services.Configure<DocumentIntelligenceOptions>(
     builder.Configuration.GetSection(DocumentIntelligenceOptions.SectionName));
 builder.Services.AddAthenaIngestion(builder.Configuration);
+builder.Services.AddAthenaRetrieval();
+builder.Services.AddAthenaAgent();
+builder.Services.AddScoped<AthenaChatSession>();
+
 builder.Services.AddSingleton<IDocumentMarkdownExtractor>(sp =>
     new DocumentIntelligenceMarkdownExtractor(
         sp.GetRequiredService<IOptions<DocumentIntelligenceOptions>>().Value));

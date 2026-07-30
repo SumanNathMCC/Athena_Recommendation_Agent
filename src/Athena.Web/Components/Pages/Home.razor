@@ -1,12 +1,14 @@
 @page "/"
 @rendermode InteractiveServer
+@using Athena.Agent
+@inject AthenaChatSession ChatSession
 
 <PageTitle>Athena</PageTitle>
 
 <div class="chat-shell">
     <header class="chat-header">
         <h1>Athena</h1>
-        <p class="text-muted mb-0">Research librarian — grounded answers and reading recommendations.</p>
+        <p class="text-muted mb-0">Research librarian — grounded answers from retrieved corpus passages.</p>
     </header>
 
     <section class="chat-messages" aria-live="polite">
@@ -15,7 +17,16 @@
             <div class="chat-message @message.Role">
                 <div class="chat-bubble">
                     <strong>@(message.Role == ChatRole.User ? "You" : "Athena")</strong>
-                    <p>@message.Text</p>
+                    <p style="white-space: pre-wrap">@message.Text</p>
+                </div>
+            </div>
+        }
+        @if (_isBusy)
+        {
+            <div class="chat-message assistant">
+                <div class="chat-bubble">
+                    <strong>Athena</strong>
+                    <p class="text-muted mb-0">Searching the corpus…</p>
                 </div>
             </div>
         }
@@ -33,9 +44,9 @@
     </form>
 
     <p class="chat-hint text-muted">
-        Agent routing is not wired yet. Use
+        Answers use hybrid retrieval over injected chunks. Ensure documents are Injected on
         <a href="corpus">Corpus setup</a>
-        to download PDFs before ingestion.
+        (re-inject after app restart — vectors are in-memory).
     </p>
 </div>
 
@@ -43,8 +54,8 @@
     private readonly List<ChatMessage> _messages =
     [
         new(ChatRole.Assistant,
-            "Welcome. I will answer from your research corpus once ingestion and the agent are connected. " +
-            "Start by fetching the PDFs from the Corpus page.")
+            "Welcome. Ask a factual question about the research corpus and I will retrieve passages, then answer from them. " +
+            "Inject documents on the Corpus page first if you have not already.")
     ];
 
     private string _draft = string.Empty;
@@ -61,13 +72,21 @@
         _draft = string.Empty;
         _messages.Add(new ChatMessage(ChatRole.User, userText));
         _isBusy = true;
-
-        await Task.Delay(300);
-
-        _messages.Add(new ChatMessage(
-            ChatRole.Assistant,
-            "The chat agent is not connected yet. Complete corpus fetch, then ingestion, retrieval, and agent wiring."));
-        _isBusy = false;
+        try
+        {
+            var reply = await ChatSession.SendAsync(userText);
+            _messages.Add(new ChatMessage(ChatRole.Assistant, reply));
+        }
+        catch (Exception ex)
+        {
+            _messages.Add(new ChatMessage(
+                ChatRole.Assistant,
+                $"Sorry — I hit an error: {ex.Message}"));
+        }
+        finally
+        {
+            _isBusy = false;
+        }
     }
 
     private enum ChatRole
