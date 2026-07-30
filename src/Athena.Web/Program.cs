@@ -39,6 +39,7 @@ builder.Services.AddScoped<ICorpusPipelineService>(sp =>
         sp.GetRequiredService<ICorpusFetcher>(),
         sp.GetRequiredService<ICorpusExtractor>(),
         sp.GetRequiredService<ICorpusInjector>(),
+        sp.GetRequiredService<Athena.Ingestion.VectorStore.ICorpusVectorIndexer>(),
         repoRoot);
 });
 builder.Services.AddScoped<ICorpusSetupService, CorpusSetupService>();

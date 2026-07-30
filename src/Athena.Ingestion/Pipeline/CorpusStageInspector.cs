@@ -1,4 +1,5 @@
 using Athena.Core.Corpus;
+using Athena.Ingestion.VectorStore;
 
 namespace Athena.Ingestion.Pipeline;
 
@@ -24,8 +25,10 @@ internal static class CorpusStageInspector
     public static async Task<IReadOnlyList<CorpusDocPipelineStatus>> InspectAsync(
         CorpusManifest manifest,
         string repoRoot,
+        ICorpusVectorIndexer vectorIndexer,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(vectorIndexer);
         ct.ThrowIfCancellationRequested();
 
         var statuses = new List<CorpusDocPipelineStatus>();
@@ -35,6 +38,11 @@ internal static class CorpusStageInspector
             var pdfPath = CorpusPaths.GetPdfPath(repoRoot, manifest.DownloadDirectory, entry.LocalFile);
             var extractedPath = CorpusPaths.GetExtractedPath(repoRoot, entry.DocId);
             var ingestedPath = CorpusPaths.GetIngestedPath(repoRoot, entry.DocId);
+            var (injectStatus, injectMessage) = await GetInjectStatusAsync(
+                entry.DocId,
+                ingestedPath,
+                vectorIndexer,
+                ct).ConfigureAwait(false);
 
             statuses.Add(new CorpusDocPipelineStatus(
                 entry.DocId,
@@ -42,10 +50,11 @@ internal static class CorpusStageInspector
                 entry.LocalFile,
                 GetDownloadStatus(pdfPath),
                 GetExtractStatus(extractedPath),
-                GetInjectStatus(ingestedPath)));
+                injectStatus,
+                InjectMessage: injectMessage));
         }
 
-        return await Task.FromResult(statuses);
+        return statuses;
     }
 
     public static PipelineStageStatus GetDownloadStatus(string pdfPath) =>
@@ -54,8 +63,31 @@ internal static class CorpusStageInspector
     public static PipelineStageStatus GetExtractStatus(string extractedPath) =>
         File.Exists(extractedPath) ? PipelineStageStatus.Succeeded : PipelineStageStatus.NotStarted;
 
-    public static PipelineStageStatus GetInjectStatus(string ingestedPath) =>
-        File.Exists(ingestedPath) ? PipelineStageStatus.Succeeded : PipelineStageStatus.NotStarted;
+    public static async Task<(PipelineStageStatus Status, string? Message)> GetInjectStatusAsync(
+        string docId,
+        string ingestedPath,
+        ICorpusVectorIndexer vectorIndexer,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(vectorIndexer);
+
+        var hasMarkdown = File.Exists(ingestedPath);
+        var hasVectors = await vectorIndexer.IsDocumentIndexedAsync(docId, ct).ConfigureAwait(false);
+
+        if (hasMarkdown && hasVectors)
+        {
+            return (PipelineStageStatus.Succeeded, null);
+        }
+
+        if (hasMarkdown && !hasVectors)
+        {
+            return (
+                PipelineStageStatus.NotStarted,
+                "Ingested markdown is on disk, but vectors are not in memory. Run Inject to reload.");
+        }
+
+        return (PipelineStageStatus.NotStarted, null);
+    }
 
     public static CorpusPipelineOperationResult ToOperationResult(
         IReadOnlyList<CorpusDocPipelineStatus> documents,

@@ -2,6 +2,7 @@ using Athena.Core.Corpus;
 using Athena.Core.Records;
 using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
+using Athena.Ingestion.VectorStore;
 
 namespace Athena.Ingestion.Pipeline;
 
@@ -17,13 +18,16 @@ public sealed class CorpusExtractor : ICorpusExtractor
 {
     private readonly ICorpusManifestReader _manifestReader;
     private readonly IDocumentMarkdownExtractor _markdownExtractor;
+    private readonly ICorpusVectorIndexer _vectorIndexer;
 
     public CorpusExtractor(
         ICorpusManifestReader manifestReader,
-        IDocumentMarkdownExtractor markdownExtractor)
+        IDocumentMarkdownExtractor markdownExtractor,
+        ICorpusVectorIndexer vectorIndexer)
     {
         _manifestReader = manifestReader;
         _markdownExtractor = markdownExtractor;
+        _vectorIndexer = vectorIndexer;
     }
 
     public async Task<CorpusPipelineOperationResult> ExtractAsync(
@@ -43,6 +47,7 @@ public sealed class CorpusExtractor : ICorpusExtractor
 
             var pdfPath = CorpusPaths.GetPdfPath(repoRoot, manifest.DownloadDirectory, entry.LocalFile);
             var extractedPath = CorpusPaths.GetExtractedPath(repoRoot, entry.DocId);
+            var ingestedPath = CorpusPaths.GetIngestedPath(repoRoot, entry.DocId);
             var downloadStatus = CorpusStageInspector.GetDownloadStatus(pdfPath);
 
             if (downloadStatus != PipelineStageStatus.Succeeded)
@@ -58,6 +63,12 @@ public sealed class CorpusExtractor : ICorpusExtractor
                 continue;
             }
 
+            var (injectStatus, injectMessage) = await CorpusStageInspector.GetInjectStatusAsync(
+                entry.DocId,
+                ingestedPath,
+                _vectorIndexer,
+                ct);
+
             if (!force && File.Exists(extractedPath))
             {
                 statuses.Add(new CorpusDocPipelineStatus(
@@ -66,9 +77,9 @@ public sealed class CorpusExtractor : ICorpusExtractor
                     entry.LocalFile,
                     downloadStatus,
                     PipelineStageStatus.Skipped,
-                    CorpusStageInspector.GetInjectStatus(
-                        CorpusPaths.GetIngestedPath(repoRoot, entry.DocId)),
-                    ExtractMessage: "Extraction artifact already exists."));
+                    injectStatus,
+                    ExtractMessage: "Extraction artifact already exists.",
+                    InjectMessage: injectMessage));
                 continue;
             }
 
@@ -96,10 +107,10 @@ public sealed class CorpusExtractor : ICorpusExtractor
                     entry.LocalFile,
                     downloadStatus,
                     PipelineStageStatus.Succeeded,
-                    CorpusStageInspector.GetInjectStatus(
-                        CorpusPaths.GetIngestedPath(repoRoot, entry.DocId)),
+                    injectStatus,
                     ExtractMessage:
-                        $"{parsed.Sections.Count} section(s), {parsed.Blocks.Count} block(s) ({proseCount} prose, {tableCount} table)."));
+                        $"{parsed.Sections.Count} section(s), {parsed.Blocks.Count} block(s) ({proseCount} prose, {tableCount} table).",
+                    InjectMessage: injectMessage));
             }
             catch (Exception ex)
             {
@@ -109,9 +120,9 @@ public sealed class CorpusExtractor : ICorpusExtractor
                     entry.LocalFile,
                     downloadStatus,
                     PipelineStageStatus.Failed,
-                    CorpusStageInspector.GetInjectStatus(
-                        CorpusPaths.GetIngestedPath(repoRoot, entry.DocId)),
-                    ExtractMessage: ex.Message));
+                    injectStatus,
+                    ExtractMessage: ex.Message,
+                    InjectMessage: injectMessage));
             }
         }
 

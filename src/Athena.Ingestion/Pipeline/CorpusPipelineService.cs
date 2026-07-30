@@ -2,6 +2,7 @@ using Athena.Core.Corpus;
 using Athena.Ingestion.Chunking;
 using Athena.Ingestion.DocVectors;
 using Athena.Ingestion.Fetch;
+using Athena.Ingestion.VectorStore;
 
 namespace Athena.Ingestion.Pipeline;
 
@@ -42,6 +43,7 @@ public sealed class CorpusPipelineService : ICorpusPipelineService
     private readonly ICorpusFetcher _fetcher;
     private readonly ICorpusExtractor _extractor;
     private readonly ICorpusInjector _injector;
+    private readonly ICorpusVectorIndexer _vectorIndexer;
     private readonly string _repoRoot;
 
     public CorpusPipelineService(
@@ -49,12 +51,14 @@ public sealed class CorpusPipelineService : ICorpusPipelineService
         ICorpusFetcher fetcher,
         ICorpusExtractor extractor,
         ICorpusInjector injector,
+        ICorpusVectorIndexer vectorIndexer,
         string repoRoot)
     {
         _manifestReader = manifestReader;
         _fetcher = fetcher;
         _extractor = extractor;
         _injector = injector;
+        _vectorIndexer = vectorIndexer;
         _repoRoot = repoRoot;
     }
 
@@ -62,7 +66,7 @@ public sealed class CorpusPipelineService : ICorpusPipelineService
         CancellationToken ct = default)
     {
         var manifest = await _manifestReader.ReadAsync(_repoRoot, ct);
-        return await CorpusStageInspector.InspectAsync(manifest, _repoRoot, ct);
+        return await CorpusStageInspector.InspectAsync(manifest, _repoRoot, _vectorIndexer, ct);
     }
 
     public Task<FetchResult> FetchAsync(bool force = false, CancellationToken ct = default) =>
