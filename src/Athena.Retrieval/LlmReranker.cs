@@ -76,7 +76,7 @@ public sealed class LlmReranker : IReranker
         for (var i = 0; i < candidates.Count; i++)
         {
             var c = candidates[i];
-            var snippet = c.Text.Length > 600 ? c.Text[..600] + "…" : c.Text;
+            var snippet = c.Text;
             sb.AppendLine($"[{i + 1}] chunkId={c.ChunkId} title={c.Title} page={c.PageNumber}");
             sb.AppendLine(snippet);
             sb.AppendLine();
