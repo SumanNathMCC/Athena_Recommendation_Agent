@@ -1,5 +1,5 @@
 @page "/"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using Athena.Agent
 @using Athena.Retrieval
 @inject AthenaChatSession ChatSession
@@ -34,16 +34,21 @@
             }
         </section>
 
-        <form class="chat-input-row" @onsubmit="SendMessage" @onsubmit:preventDefault="true">
+        <div class="chat-input-row">
             <input class="form-control"
                    placeholder="Ask about the research library…"
-                   @bind="_draft"
+                   value="@_draft"
+                   @oninput="OnDraftInput"
+                   @onkeydown="OnDraftKeyDown"
                    disabled="@_isBusy"
                    aria-label="Message" />
-            <button class="btn btn-primary" type="submit" disabled="@_isBusy || string.IsNullOrWhiteSpace(_draft)">
+            <button class="btn btn-primary"
+                    type="button"
+                    disabled="@(_isBusy || string.IsNullOrWhiteSpace(_draft))"
+                    @onclick="SendMessage">
                 Send
             </button>
-        </form>
+        </div>
 
         <p class="chat-hint text-muted">
             Answers use hybrid retrieval over injected chunks. Ensure documents are Injected on
@@ -113,9 +118,22 @@
     private string _draft = string.Empty;
     private bool _isBusy;
 
+    private void OnDraftInput(ChangeEventArgs e)
+    {
+        _draft = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task OnDraftKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
     private async Task SendMessage()
     {
-        if (string.IsNullOrWhiteSpace(_draft))
+        if (_isBusy || string.IsNullOrWhiteSpace(_draft))
         {
             return;
         }

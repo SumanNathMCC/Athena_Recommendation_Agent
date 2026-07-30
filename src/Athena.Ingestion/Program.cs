@@ -66,7 +66,7 @@ static async Task<int> RunFetchCommandAsync(string[] args, CancellationToken ct)
     var result = await fetcher.FetchAsync(
         repoRoot,
         options.Force,
-        options.DocId,
+        options.DocId is null ? null : new[] { options.DocId },
         ct);
 
     Console.WriteLine();

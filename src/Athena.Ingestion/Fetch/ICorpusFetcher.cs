@@ -7,6 +7,6 @@ public interface ICorpusFetcher
     Task<FetchResult> FetchAsync(
         string repoRoot,
         bool force = false,
-        string? docId = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default);
 }

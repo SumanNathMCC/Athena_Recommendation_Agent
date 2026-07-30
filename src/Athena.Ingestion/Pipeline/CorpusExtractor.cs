@@ -11,6 +11,7 @@ public interface ICorpusExtractor
     Task<CorpusPipelineOperationResult> ExtractAsync(
         string repoRoot,
         bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default);
 }
 
@@ -33,13 +34,22 @@ public sealed class CorpusExtractor : ICorpusExtractor
     public async Task<CorpusPipelineOperationResult> ExtractAsync(
         string repoRoot,
         bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default)
     {
         var manifest = await _manifestReader.ReadAsync(repoRoot, ct);
         CorpusPaths.EnsureArtifactDirectories(repoRoot);
 
-        var documents = CorpusDocumentCatalog.GetAllDocuments(manifest);
+        var documents = DocumentIdFilter.Apply(
+            CorpusDocumentCatalog.GetAllDocuments(manifest),
+            entry => entry.DocId,
+            docIds);
         var statuses = new List<CorpusDocPipelineStatus>();
+
+        if (documents.Count == 0)
+        {
+            throw new InvalidOperationException("No documents were selected for extraction.");
+        }
 
         foreach (var entry in documents)
         {

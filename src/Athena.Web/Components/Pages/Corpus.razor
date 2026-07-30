@@ -1,5 +1,5 @@
 @page "/corpus"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject ICorpusSetupService CorpusSetupService
 @implements IAsyncDisposable
 
@@ -8,25 +8,121 @@
 <h3>Corpus setup</h3>
 
 <p class="text-muted">
-    Download PDFs, extract text with Azure Document Intelligence, and stage ingestion artifacts.
+    Select documents below, then download, extract, or inject only those rows.
 </p>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="status">
+        @_statusMessage
+    </div>
+}
+
+@if (_summary is not null)
+{
+    <p class="fw-semibold">@_summary</p>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <h5 class="mb-0">Document pipeline status</h5>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted small">@_selectedDocIds.Count / @_documents.Count selected</span>
+        <button class="btn btn-sm btn-outline-secondary"
+                type="button"
+                disabled="@(_isRunning || _documents.Count == 0 || AllSelected)"
+                @onclick="SelectAll">
+            Select all
+        </button>
+        <button class="btn btn-sm btn-outline-secondary"
+                type="button"
+                disabled="@(_isRunning || _selectedDocIds.Count == 0)"
+                @onclick="UnselectAll">
+            Unselect all
+        </button>
+        <button class="btn btn-sm btn-outline-primary"
+                type="button"
+                disabled="@_isRunning"
+                @onclick="RefreshStatusAsync">
+            Refresh status
+        </button>
+    </div>
+</div>
+
+@if (_documents.Count == 0 && !_isLoadingStatus)
+{
+    <p class="text-muted">No documents found in the corpus manifest.</p>
+}
+else if (_isLoadingStatus && _documents.Count == 0)
+{
+    <p class="text-muted">Loading status…</p>
+}
+else
+{
+    <div class="table-responsive mb-4">
+        <table class="table table-sm table-striped align-middle">
+            <thead>
+                <tr>
+                    <th style="width: 2.5rem">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               checked="@AllSelected"
+                               disabled="@(_isRunning || _documents.Count == 0)"
+                               @onclick="ToggleSelectAllClick"
+                               @onclick:preventDefault="true"
+                               title="Select / unselect all"
+                               aria-label="Select or unselect all documents" />
+                    </th>
+                    <th>Doc ID</th>
+                    <th>File</th>
+                    <th>Download</th>
+                    <th>Extract</th>
+                    <th>Inject</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var document in _documents)
+                {
+                    var isSelected = _selectedDocIds.Contains(document.DocId);
+                    <tr class="@(isSelected ? "table-active" : null)">
+                        <td>
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   checked="@isSelected"
+                                   disabled="@_isRunning"
+                                   @onclick="() => ToggleDocClick(document.DocId)"
+                                   @onclick:preventDefault="true"
+                                   aria-label="@($"Select {document.DocId}")" />
+                        </td>
+                        <td>@document.DocId</td>
+                        <td><code>@document.LocalFile</code></td>
+                        <td>@StageBadge(document.Download)</td>
+                        <td>@StageBadge(document.Extract)</td>
+                        <td>@StageBadge(document.Inject)</td>
+                        <td class="small text-muted">@FormatDetails(document)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
 
 <div class="card mb-4">
     <div class="card-header fw-semibold">1. Download</div>
     <div class="card-body">
         <p class="text-muted small mb-3">
-            Fetch research PDFs from <code>corpus/manifest.json</code> into <code>corpus/pdfs/</code>.
+            Fetch selected research PDFs from <code>corpus/manifest.json</code> into <code>corpus/pdfs/</code>.
         </p>
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-primary"
-                    disabled="@_isRunning"
+                    disabled="@ActionsDisabled"
                     @onclick="() => RunFetchAsync(force: false)">
-                @ButtonLabel("Fetch corpus", _currentOperation == Operation.Fetch)
+                @ButtonLabel("Fetch selected", _currentOperation == Operation.Fetch)
             </button>
             <button class="btn btn-outline-secondary"
-                    disabled="@_isRunning"
+                    disabled="@ActionsDisabled"
                     @onclick="() => RunFetchAsync(force: true)">
-                @ButtonLabel("Force re-download", _currentOperation == Operation.FetchForce)
+                @ButtonLabel("Force re-download selected", _currentOperation == Operation.FetchForce)
             </button>
         </div>
     </div>
@@ -36,19 +132,19 @@
     <div class="card-header fw-semibold">2. Extract (Azure Document Intelligence)</div>
     <div class="card-body">
         <p class="text-muted small mb-3">
-            Extract prose and tables via <code>prebuilt-layout</code> into section-structured Markdown under <code>corpus/extracted/</code>.
-            Use <strong>Force re-extract</strong> after upgrading extraction to refresh section headers and bodies.
+            Extract prose and tables via <code>prebuilt-layout</code> into section-structured Markdown under <code>corpus/extracted/</code>
+            for the selected documents.
         </p>
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-primary"
-                    disabled="@_isRunning"
+                    disabled="@ActionsDisabled"
                     @onclick="() => RunExtractAsync(force: false)">
-                @ButtonLabel("Extract text", _currentOperation == Operation.Extract)
+                @ButtonLabel("Extract selected", _currentOperation == Operation.Extract)
             </button>
             <button class="btn btn-outline-secondary"
-                    disabled="@_isRunning"
+                    disabled="@ActionsDisabled"
                     @onclick="() => RunExtractAsync(force: true)">
-                @ButtonLabel("Force re-extract", _currentOperation == Operation.ExtractForce)
+                @ButtonLabel("Force re-extract selected", _currentOperation == Operation.ExtractForce)
             </button>
         </div>
     </div>
@@ -58,13 +154,8 @@
     <div class="card-header fw-semibold">3. Inject (chunk + summarise + embed)</div>
     <div class="card-body">
         <p class="text-muted small mb-3">
-            Chunk extracted sections into <code>corpus/ingested/{docId}.md</code>,
-            generate an LLM document summary, and upsert embeddings into the Semantic Kernel
-            <strong>in-memory vector store</strong> (<code>chunks</code> and <code>documents</code> collections).
-            Requires <code>AzureFoundry</code> settings (endpoint, API key, chat + embedding deployments)
-            for LLM summary and embeddings via Semantic Kernel.
-            Document vectors use the configured <code>DocumentVector:Strategy</code>
-            (Summary / Centroid / Composite).
+            Chunk, summarise, and embed the selected documents into the in-memory vector store.
+            Requires <code>AzureFoundry</code> settings.
         </p>
         <div class="mb-3">
             <label class="form-label" for="chunkingStrategy">Chunking strategy</label>
@@ -89,14 +180,14 @@
         </div>
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-primary"
-                    disabled="@_isRunning"
+                    disabled="@ActionsDisabled"
                     @onclick="() => RunInjectAsync(force: false)">
-                @ButtonLabel("Inject staged data", _currentOperation == Operation.Inject)
+                @ButtonLabel("Inject selected", _currentOperation == Operation.Inject)
             </button>
             <button class="btn btn-outline-secondary"
-                    disabled="@_isRunning"
+                    disabled="@ActionsDisabled"
                     @onclick="() => RunInjectAsync(force: true)">
-                @ButtonLabel("Force re-inject", _currentOperation == Operation.InjectForce)
+                @ButtonLabel("Force re-inject selected", _currentOperation == Operation.InjectForce)
             </button>
         </div>
     </div>
@@ -106,75 +197,15 @@
     <div class="card-header fw-semibold">Run all</div>
     <div class="card-body">
         <p class="text-muted small mb-3">
-            Force download, extract, and inject every document in one pass.
+            Force download, extract, and inject the selected documents in one pass.
         </p>
         <button class="btn btn-warning"
-                disabled="@_isRunning"
+                disabled="@ActionsDisabled"
                 @onclick="RunFullPipelineAsync">
-            @ButtonLabel("Force download + extract + inject", _currentOperation == Operation.FullPipeline)
+            @ButtonLabel("Force download + extract + inject selected", _currentOperation == Operation.FullPipeline)
         </button>
     </div>
 </div>
-
-@if (!string.IsNullOrWhiteSpace(_statusMessage))
-{
-    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="status">
-        @_statusMessage
-    </div>
-}
-
-@if (_summary is not null)
-{
-    <p class="fw-semibold">@_summary</p>
-}
-
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h5 class="mb-0">Document pipeline status</h5>
-    <button class="btn btn-sm btn-outline-primary"
-            disabled="@_isRunning"
-            @onclick="RefreshStatusAsync">
-        Refresh status
-    </button>
-</div>
-
-@if (_documents.Count == 0 && !_isLoadingStatus)
-{
-    <p class="text-muted">No documents found in the corpus manifest.</p>
-}
-else if (_isLoadingStatus && _documents.Count == 0)
-{
-    <p class="text-muted">Loading status…</p>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Doc ID</th>
-                    <th>File</th>
-                    <th>Download</th>
-                    <th>Extract</th>
-                    <th>Inject</th>
-                    <th>Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var document in _documents)
-                {
-                    <tr>
-                        <td>@document.DocId</td>
-                        <td><code>@document.LocalFile</code></td>
-                        <td>@StageBadge(document.Download)</td>
-                        <td>@StageBadge(document.Extract)</td>
-                        <td>@StageBadge(document.Inject)</td>
-                        <td class="small text-muted">@FormatDetails(document)</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
 
 @code {
     private enum Operation
@@ -198,10 +229,20 @@ else
     private ChunkingStrategy _chunkingStrategy = ChunkingStrategy.SectionAware;
     private DocumentVectorStrategyKind _docVectorStrategy = DocumentVectorStrategyKind.Summary;
     private List<CorpusDocPipelineStatus> _documents = [];
+    private readonly HashSet<string> _selectedDocIds = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool ActionsDisabled => _isRunning || _selectedDocIds.Count == 0;
+
+    private bool AllSelected =>
+        _documents.Count > 0 && _documents.All(document => _selectedDocIds.Contains(document.DocId));
 
     protected override async Task OnInitializedAsync()
     {
         await RefreshStatusAsync();
+        if (_selectedDocIds.Count == 0)
+        {
+            SelectAll();
+        }
     }
 
     private async Task RefreshStatusAsync()
@@ -212,6 +253,8 @@ else
         try
         {
             _documents = (await CorpusSetupService.GetStatusAsync()).ToList();
+            _selectedDocIds.RemoveWhere(id => _documents.All(document =>
+                !document.DocId.Equals(id, StringComparison.OrdinalIgnoreCase)));
         }
         catch (Exception ex)
         {
@@ -224,12 +267,44 @@ else
         }
     }
 
+    private IReadOnlyList<string> GetSelectedDocIds() => _selectedDocIds.ToList();
+
+    private void SelectAll()
+    {
+        foreach (var document in _documents)
+        {
+            _selectedDocIds.Add(document.DocId);
+        }
+    }
+
+    private void UnselectAll() => _selectedDocIds.Clear();
+
+    private void ToggleSelectAllClick()
+    {
+        if (AllSelected)
+        {
+            UnselectAll();
+        }
+        else
+        {
+            SelectAll();
+        }
+    }
+
+    private void ToggleDocClick(string docId)
+    {
+        if (!_selectedDocIds.Add(docId))
+        {
+            _selectedDocIds.Remove(docId);
+        }
+    }
+
     private Task RunFetchAsync(bool force) =>
         RunOperationAsync(
             force ? Operation.FetchForce : Operation.Fetch,
             async () =>
             {
-                var result = await CorpusSetupService.FetchAsync(force);
+                var result = await CorpusSetupService.FetchAsync(force, GetSelectedDocIds());
                 _summary = $"Download — succeeded: {result.Downloaded}, skipped: {result.Skipped}, failed: {result.Failed}";
                 _statusMessage = result.IsSuccess
                     ? "Corpus fetch completed successfully."
@@ -243,13 +318,13 @@ else
             force ? Operation.ExtractForce : Operation.Extract,
             async () =>
             {
-                var result = await CorpusSetupService.ExtractAsync(force);
+                var result = await CorpusSetupService.ExtractAsync(force, GetSelectedDocIds());
                 _summary = $"Extract — succeeded: {result.Succeeded}, skipped: {result.Skipped}, failed: {result.Failed}";
                 _statusMessage = result.IsSuccess
                     ? "Extraction completed successfully."
                     : "Extraction completed with one or more failures.";
                 _isError = !result.IsSuccess;
-                _documents = result.Documents.ToList();
+                await RefreshStatusAsync();
             });
 
     private Task RunInjectAsync(bool force) =>
@@ -257,13 +332,17 @@ else
             force ? Operation.InjectForce : Operation.Inject,
             async () =>
             {
-                var result = await CorpusSetupService.InjectAsync(force, _chunkingStrategy, _docVectorStrategy);
+                var result = await CorpusSetupService.InjectAsync(
+                    force,
+                    _chunkingStrategy,
+                    _docVectorStrategy,
+                    GetSelectedDocIds());
                 _summary = $"Inject — succeeded: {result.Succeeded}, skipped: {result.Skipped}, failed: {result.Failed}";
                 _statusMessage = result.IsSuccess
                     ? "Injection staging completed successfully."
                     : "Injection staging completed with one or more failures.";
                 _isError = !result.IsSuccess;
-                _documents = result.Documents.ToList();
+                await RefreshStatusAsync();
             });
 
     private Task RunFullPipelineAsync() =>
@@ -271,7 +350,11 @@ else
             Operation.FullPipeline,
             async () =>
             {
-                var result = await CorpusSetupService.RunFullPipelineAsync(force: true, _chunkingStrategy, _docVectorStrategy);
+                var result = await CorpusSetupService.RunFullPipelineAsync(
+                    force: true,
+                    _chunkingStrategy,
+                    _docVectorStrategy,
+                    GetSelectedDocIds());
                 _summary =
                     $"Full pipeline — download failed: {result.Fetch.Failed}, " +
                     $"extract failed: {result.Extract.Failed}, inject failed: {result.Inject.Failed}";
@@ -279,11 +362,18 @@ else
                     ? "Full pipeline completed successfully."
                     : "Full pipeline completed with one or more failures.";
                 _isError = !result.IsSuccess;
-                _documents = result.Documents.ToList();
+                await RefreshStatusAsync();
             });
 
     private async Task RunOperationAsync(Operation operation, Func<Task> action)
     {
+        if (_selectedDocIds.Count == 0)
+        {
+            _isError = true;
+            _statusMessage = "Select at least one document first.";
+            return;
+        }
+
         _isRunning = true;
         _currentOperation = operation;
         _isError = false;

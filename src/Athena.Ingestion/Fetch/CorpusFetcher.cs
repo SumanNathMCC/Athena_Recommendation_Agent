@@ -16,26 +16,25 @@ public sealed class CorpusFetcher : ICorpusFetcher
     public async Task<FetchResult> FetchAsync(
         string repoRoot,
         bool force = false,
-        string? docId = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default)
     {
         var manifest = await _manifestReader.ReadAsync(repoRoot, ct);
         var downloadDirectory = GetDownloadDirectory(repoRoot, manifest.DownloadDirectory);
         Directory.CreateDirectory(downloadDirectory);
 
-        var documents = manifest.Documents
-            .Where(document => document.Fetch)
-            .Where(document =>
-                docId is null ||
-                document.DocId.Equals(docId, StringComparison.OrdinalIgnoreCase))
+        var documents = Pipeline.DocumentIdFilter.Apply(
+                manifest.Documents.Where(document => document.Fetch),
+                document => document.DocId,
+                docIds)
             .ToList();
 
         if (documents.Count == 0)
         {
             throw new InvalidOperationException(
-                docId is null
+                docIds is null
                     ? "No fetchable documents were found in the corpus manifest."
-                    : $"Document '{docId}' was not found or is not fetchable.");
+                    : "No matching fetchable documents were selected.");
         }
 
         var results = new List<FetchItemResult>();

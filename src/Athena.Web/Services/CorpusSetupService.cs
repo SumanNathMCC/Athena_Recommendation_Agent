@@ -9,20 +9,28 @@ public interface ICorpusSetupService
 {
     Task<IReadOnlyList<CorpusDocPipelineStatus>> GetStatusAsync(CancellationToken ct = default);
 
-    Task<FetchResult> FetchAsync(bool force = false, CancellationToken ct = default);
+    Task<FetchResult> FetchAsync(
+        bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
+        CancellationToken ct = default);
 
-    Task<CorpusPipelineOperationResult> ExtractAsync(bool force = false, CancellationToken ct = default);
+    Task<CorpusPipelineOperationResult> ExtractAsync(
+        bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
+        CancellationToken ct = default);
 
     Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default);
 
     Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default);
 }
 
@@ -38,23 +46,31 @@ public sealed class CorpusSetupService : ICorpusSetupService
     public Task<IReadOnlyList<CorpusDocPipelineStatus>> GetStatusAsync(CancellationToken ct = default) =>
         _pipeline.GetStatusAsync(ct);
 
-    public Task<FetchResult> FetchAsync(bool force = false, CancellationToken ct = default) =>
-        _pipeline.FetchAsync(force, ct);
+    public Task<FetchResult> FetchAsync(
+        bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
+        CancellationToken ct = default) =>
+        _pipeline.FetchAsync(force, docIds, ct);
 
-    public Task<CorpusPipelineOperationResult> ExtractAsync(bool force = false, CancellationToken ct = default) =>
-        _pipeline.ExtractAsync(force, ct);
+    public Task<CorpusPipelineOperationResult> ExtractAsync(
+        bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
+        CancellationToken ct = default) =>
+        _pipeline.ExtractAsync(force, docIds, ct);
 
     public Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default) =>
-        _pipeline.InjectAsync(force, strategy, documentVectorStrategy, ct);
+        _pipeline.InjectAsync(force, strategy, documentVectorStrategy, docIds, ct);
 
     public Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default) =>
-        _pipeline.RunFullPipelineAsync(force, strategy, documentVectorStrategy, ct);
+        _pipeline.RunFullPipelineAsync(force, strategy, documentVectorStrategy, docIds, ct);
 }

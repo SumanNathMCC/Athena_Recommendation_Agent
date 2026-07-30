@@ -10,20 +10,28 @@ public interface ICorpusPipelineService
 {
     Task<IReadOnlyList<CorpusDocPipelineStatus>> GetStatusAsync(CancellationToken ct = default);
 
-    Task<FetchResult> FetchAsync(bool force = false, CancellationToken ct = default);
+    Task<FetchResult> FetchAsync(
+        bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
+        CancellationToken ct = default);
 
-    Task<CorpusPipelineOperationResult> ExtractAsync(bool force = false, CancellationToken ct = default);
+    Task<CorpusPipelineOperationResult> ExtractAsync(
+        bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
+        CancellationToken ct = default);
 
     Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default);
 
     Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default);
 }
 
@@ -69,30 +77,36 @@ public sealed class CorpusPipelineService : ICorpusPipelineService
         return await CorpusStageInspector.InspectAsync(manifest, _repoRoot, _vectorIndexer, ct);
     }
 
-    public Task<FetchResult> FetchAsync(bool force = false, CancellationToken ct = default) =>
-        _fetcher.FetchAsync(_repoRoot, force, docId: null, ct);
+    public Task<FetchResult> FetchAsync(
+        bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
+        CancellationToken ct = default) =>
+        _fetcher.FetchAsync(_repoRoot, force, docIds, ct);
 
     public Task<CorpusPipelineOperationResult> ExtractAsync(
         bool force = false,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default) =>
-        _extractor.ExtractAsync(_repoRoot, force, ct);
+        _extractor.ExtractAsync(_repoRoot, force, docIds, ct);
 
     public Task<CorpusPipelineOperationResult> InjectAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default) =>
-        _injector.InjectAsync(_repoRoot, force, strategy, documentVectorStrategy, ct);
+        _injector.InjectAsync(_repoRoot, force, strategy, documentVectorStrategy, docIds, ct);
 
     public async Task<CorpusFullPipelineResult> RunFullPipelineAsync(
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default)
     {
-        var fetch = await FetchAsync(force, ct);
-        var extract = await ExtractAsync(force, ct);
-        var inject = await InjectAsync(force, strategy, documentVectorStrategy, ct);
+        var fetch = await FetchAsync(force, docIds, ct);
+        var extract = await ExtractAsync(force, docIds, ct);
+        var inject = await InjectAsync(force, strategy, documentVectorStrategy, docIds, ct);
         var status = await GetStatusAsync(ct);
 
         return new CorpusFullPipelineResult(fetch, extract, inject, status);

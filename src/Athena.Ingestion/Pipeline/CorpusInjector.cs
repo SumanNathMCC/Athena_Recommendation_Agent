@@ -18,6 +18,7 @@ public interface ICorpusInjector
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default);
 }
 
@@ -54,6 +55,7 @@ public sealed class CorpusInjector : ICorpusInjector
         bool force = false,
         ChunkingStrategy strategy = ChunkingStrategy.SectionAware,
         DocumentVectorStrategyKind? documentVectorStrategy = null,
+        IReadOnlyCollection<string>? docIds = null,
         CancellationToken ct = default)
     {
         EnsureAzureFoundryConfigured();
@@ -61,7 +63,15 @@ public sealed class CorpusInjector : ICorpusInjector
         var manifest = await _manifestReader.ReadAsync(repoRoot, ct);
         CorpusPaths.EnsureArtifactDirectories(repoRoot);
 
-        var documents = CorpusDocumentCatalog.GetAllDocuments(manifest);
+        var documents = DocumentIdFilter.Apply(
+            CorpusDocumentCatalog.GetAllDocuments(manifest),
+            entry => entry.DocId,
+            docIds);
+        if (documents.Count == 0)
+        {
+            throw new InvalidOperationException("No documents were selected for injection.");
+        }
+
         var manifestById = manifest.Documents.ToDictionary(document => document.DocId, StringComparer.OrdinalIgnoreCase);
         var chunker = _chunkerFactory.GetChunker(strategy);
         var docVector = documentVectorStrategy is null
