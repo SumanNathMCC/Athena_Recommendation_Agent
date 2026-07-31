@@ -56,7 +56,7 @@ public sealed class SearchPlugin
         for (var i = 0; i < passages.Count; i++)
         {
             var p = passages[i];
-            var snippet = p.Text.Length > 400 ? p.Text[..400] + "…" : p.Text;
+            var snippet = p.Text;
             sb.AppendLine($"{i + 1}. [{p.Title}, p.{p.PageNumber}] (doc={p.DocId}, score={p.Score:F3})");
             sb.AppendLine(snippet);
             sb.AppendLine();
