@@ -19,7 +19,7 @@
         <section class="chat-messages" aria-live="polite">
             @foreach (var message in _messages)
             {
-                <div class="chat-message @message.Role">
+                <div class="chat-message @(message.Role == ChatRole.User ? "user" : "assistant")">
                     <div class="chat-bubble">
                         <strong>@(message.Role == ChatRole.User ? "You" : "Athena")</strong>
                         @if (message.Role == ChatRole.User)
