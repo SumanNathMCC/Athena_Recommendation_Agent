@@ -112,6 +112,20 @@ h1:focus {
     white-space: pre-wrap;
 }
 
+.streaming-text .stream-caret {
+    display: inline-block;
+    width: 0.45ch;
+    margin-left: 1px;
+    background: currentColor;
+    animation: stream-caret-blink 0.9s step-end infinite;
+    vertical-align: text-bottom;
+    height: 1.05em;
+}
+
+@keyframes stream-caret-blink {
+    50% { opacity: 0; }
+}
+
 .chat-bubble .md-content {
     margin: 0.35rem 0 0;
 }

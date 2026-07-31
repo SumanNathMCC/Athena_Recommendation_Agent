@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Text;
 using Athena.Retrieval;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
@@ -22,28 +24,57 @@ public sealed class AthenaChatSession
         _retrievedContext = retrievedContext;
     }
 
-    public async Task<(string Reply, IReadOnlyList<Passage> Passages)> SendAsync(
+    /// <summary>
+    /// Streams assistant text deltas from the model (SK agent streaming API).
+    /// Passages are available via <see cref="GetLastPassages"/> after tool calls complete.
+    /// </summary>
+    public async IAsyncEnumerable<string> StreamAsync(
         string userMessage,
-        CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(userMessage))
         {
-            return (string.Empty, Array.Empty<Passage>());
+            yield break;
         }
 
         _retrievedContext.Clear();
 
-        var sb = new System.Text.StringBuilder();
-        await foreach (var item in _agent.InvokeAsync(
+        await foreach (var item in _agent.InvokeStreamingAsync(
                            message: new ChatMessageContent(AuthorRole.User, userMessage.Trim()),
                            thread: _thread,
                            options: null,
                            cancellationToken: ct).ConfigureAwait(false))
         {
-            if (!string.IsNullOrEmpty(item.Message.Content))
+            var message = item.Message;
+            if (message is null ||
+                message.Role == AuthorRole.Tool ||
+                message.Role == AuthorRole.User ||
+                message.Role == AuthorRole.System)
             {
-                sb.Append(item.Message.Content);
+                continue;
             }
+
+            var delta = message.Content;
+            if (string.IsNullOrEmpty(delta))
+            {
+                continue;
+            }
+
+            yield return delta;
+        }
+    }
+
+    public IReadOnlyList<Passage> GetLastPassages() =>
+        _retrievedContext.LastPassages.ToList();
+
+    public async Task<(string Reply, IReadOnlyList<Passage> Passages)> SendAsync(
+        string userMessage,
+        CancellationToken ct = default)
+    {
+        var sb = new StringBuilder();
+        await foreach (var delta in StreamAsync(userMessage, ct).ConfigureAwait(false))
+        {
+            sb.Append(delta);
         }
 
         var text = sb.ToString().Trim();
@@ -52,7 +83,6 @@ public sealed class AthenaChatSession
             text = "I could not produce a reply. Ensure the corpus is injected and Azure Foundry is configured.";
         }
 
-        IReadOnlyList<Passage> passages = _retrievedContext.LastPassages.ToList();
-        return (text, passages);
+        return (text, GetLastPassages());
     }
 }
