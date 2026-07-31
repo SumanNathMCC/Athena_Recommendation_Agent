@@ -1,6 +1,8 @@
 using System.Text;
 using System.ComponentModel;
+using Athena.Ingestion.Embeddings;
 using Athena.Plugins.Prompts;
+using Athena.Recommendation;
 using Athena.Retrieval;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -18,15 +20,24 @@ public sealed class SearchPlugin
     private readonly IHybridRetriever _hybridRetriever;
     private readonly IRetrievedContextAccessor _retrievedContext;
     private readonly SkKernel _kernel;
+    private readonly IInterestProfileStore _profiles;
+    private readonly ISessionContext _session;
+    private readonly ICorpusEmbeddingService _embeddings;
 
     public SearchPlugin(
         IHybridRetriever hybridRetriever,
         IRetrievedContextAccessor retrievedContext,
-        SkKernel kernel)
+        SkKernel kernel,
+        IInterestProfileStore profiles,
+        ISessionContext session,
+        ICorpusEmbeddingService embeddings)
     {
         _hybridRetriever = hybridRetriever;
         _retrievedContext = retrievedContext;
         _kernel = kernel;
+        _profiles = profiles;
+        _session = session;
+        _embeddings = embeddings;
     }
 
     [KernelFunction("hybrid_search")]
@@ -45,6 +56,7 @@ public sealed class SearchPlugin
             .ConfigureAwait(false);
 
         _retrievedContext.Set(passages, query);
+        await ObserveQueryAsync(query, cancellationToken).ConfigureAwait(false);
 
         if (passages.Count == 0)
         {
@@ -81,6 +93,7 @@ public sealed class SearchPlugin
             .ConfigureAwait(false);
 
         _retrievedContext.Set(passages, question);
+        await ObserveQueryAsync(question, cancellationToken).ConfigureAwait(false);
 
         if (passages.Count == 0)
         {
@@ -101,6 +114,24 @@ public sealed class SearchPlugin
 
     private static string? NormalizeDocId(string? docId) =>
         string.IsNullOrWhiteSpace(docId) ? null : docId.Trim();
+
+    private async Task ObserveQueryAsync(string text, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        try
+        {
+            var vector = await _embeddings.EmbedAsync(text.Trim(), ct).ConfigureAwait(false);
+            await _profiles.UpdateAsync(_session.SessionId, vector, ct: ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Interest profiling must not fail search/answer paths.
+        }
+    }
 
     private static string FormatContext(IReadOnlyList<Passage> passages)
     {

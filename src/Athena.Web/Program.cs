@@ -4,6 +4,7 @@ using Athena.Ingestion;
 using Athena.Ingestion.Extraction;
 using Athena.Ingestion.Fetch;
 using Athena.Ingestion.Pipeline;
+using Athena.Recommendation;
 using Athena.Retrieval;
 using Athena.Web.Components;
 using Athena.Web.Services;
@@ -17,8 +18,11 @@ builder.Services.AddRazorComponents()
 
 builder.Services.Configure<DocumentIntelligenceOptions>(
     builder.Configuration.GetSection(DocumentIntelligenceOptions.SectionName));
+builder.Services.Configure<RecommendationOptions>(
+    builder.Configuration.GetSection(RecommendationOptions.SectionName));
 builder.Services.AddAthenaIngestion(builder.Configuration);
 builder.Services.AddAthenaRetrieval();
+builder.Services.AddAthenaRecommendation();
 
 var repoRootForLogs = RepoRootLocator.Find(builder.Environment.ContentRootPath);
 builder.Services.AddAthenaFilters(

@@ -13,18 +13,21 @@ public static class AgentServiceCollectionExtensions
 {
     public static IServiceCollection AddAthenaAgent(this IServiceCollection services)
     {
-        // Scoped so SearchPlugin shares the circuit's IRetrievedContextAccessor with the chat UI.
+        // Scoped so plugins share the circuit's retrieval context + interest profile.
         services.AddScoped<SearchPlugin>();
+        services.AddScoped<RecommendPlugin>();
         services.AddScoped<ChatCompletionAgent>(sp =>
         {
             var rootKernel = sp.GetRequiredService<SkKernel>();
             var searchPlugin = sp.GetRequiredService<SearchPlugin>();
+            var recommendPlugin = sp.GetRequiredService<RecommendPlugin>();
             var configuration = sp.GetRequiredService<IConfiguration>();
             var environment = sp.GetService<IHostEnvironment>();
 
             // Fresh kernel per circuit so plugin instances are not shared across users.
             var agentKernel = new SkKernel(rootKernel.Services);
             agentKernel.Plugins.AddFromObject(searchPlugin, pluginName: "Search");
+            agentKernel.Plugins.AddFromObject(recommendPlugin, pluginName: "Recommend");
             agentKernel.FunctionInvocationFilters.Add(sp.GetRequiredService<GroundingGuardFilter>());
 
             var promptFile = configuration["Agent:PromptFile"] ?? AthenaAgentFactory.DefaultPromptFile;
