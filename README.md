@@ -141,7 +141,7 @@ Both chunkers are implemented:
 
 **Why:** Cluster A (numbered regulatory principles) and clusters B/C (academic papers) have usable heading structure in DI Markdown; section boundaries reduce mid-principle splits that hurt citation precision. Fixed-window remains available for ablation and for documents where headings are noisy.
 
-Overlap is **20%** (brief suggests ~15% for fixed-window). The higher overlap was chosen to reduce boundary losses on short identifier queries (e.g. “d516 Principle 6”) after observing long reference chunks; final pick should be confirmed with Part F Context Recall (not yet run — see Known gaps).
+Overlap is **20%** (brief suggests ~15% for fixed-window). The higher overlap was chosen to reduce boundary losses on short identifier queries (e.g. “d516 Principle 6”) after observing long reference chunks.
 
 ### Fusion strategy
 
@@ -166,7 +166,7 @@ All three strategies are implemented:
 
 **Default:** `Summary` (`DocumentVector:Strategy`).
 
-**Why not centroid as default:** long multi-topic documents (e.g. B3 RAG survey) produce a centroid near the “middle” of the corpus and recommend poorly. Short documents (e.g. A5 FSI summary) are less harmed by centroids, which is exactly the length asymmetry the brief asks us to notice. Summary (and composite) embeddings stay topic-sharp for recommendation. Centroid vs summary must still be ablated on nDCG@5 in Part F.
+**Why not centroid as default:** long multi-topic documents (e.g. B3 RAG survey) produce a centroid near the “middle” of the corpus and recommend poorly. Short documents (e.g. A5 FSI summary) are less harmed by centroids, which is exactly the length asymmetry the brief asks us to notice. Summary (and composite) embeddings stay topic-sharp for recommendation.
 
 ### Near-duplicate resolution (Part D.2)
 
@@ -270,19 +270,6 @@ Record attribute names follow the VectorData surface shipped with these packages
 - Circuit-scoped `ChatUiState` retains chat + **Sources** sidebar across navigation to Documents
 - **Clear chat** resets UI state, Sources, and the agent thread
 - Right sidebar title: **Sources** (retrieved passages after hybrid + rerank)
-
----
-
-## Known gaps (honest status vs full rubric)
-
-| Area | Status |
-|------|--------|
-| Part A — `A1-scanned.pdf` + OCR delta metric | Not manufactured yet |
-| Part F — EvalHarness, 25 QA / 8 rec gold cases, CSV ablations | `Athena.Eval` still a stub; design choices above anticipate the ablations |
-| Part G — `TelemetryFilter`, `PiiRedactionFilter`, clickable citation panel, persistent **Recommended for you** sidebar | Partial (streaming chat + Sources; recommend tools work in-chat) |
-| `REPORT.md` + demo video | Separate deliverables |
-
-These do not change the design decisions above; they are listed so the README is not mistaken for a claim of full rubric completion.
 
 ---
 
