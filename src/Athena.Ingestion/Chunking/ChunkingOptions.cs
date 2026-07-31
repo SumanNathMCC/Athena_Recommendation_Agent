@@ -7,7 +7,7 @@ public sealed class ChunkingOptions
 {
     public const string SectionName = "Chunking";
 
-    public int MaxTokens { get; set; } = 1000;
+    public int MaxTokens { get; set; } = 800;
 
     public double OverlapRatio { get; set; } = 0.20;
 

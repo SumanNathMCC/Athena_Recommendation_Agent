@@ -107,9 +107,60 @@ h1:focus {
     border-color: #b6d4fe;
 }
 
-.chat-bubble p {
+.chat-bubble p.chat-plain {
     margin: 0.35rem 0 0;
     white-space: pre-wrap;
+}
+
+.chat-bubble .md-content {
+    margin: 0.35rem 0 0;
+}
+
+.md-content {
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.md-content p {
+    margin: 0 0 0.6rem;
+}
+
+.md-content p:last-child {
+    margin-bottom: 0;
+}
+
+.md-content table {
+    border-collapse: collapse;
+    width: max-content;
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
+    margin: 0.6rem 0;
+    font-size: 0.82rem;
+    background: #fff;
+}
+
+.md-content th,
+.md-content td {
+    border: 1px solid #ced4da;
+    padding: 0.35rem 0.55rem;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.md-content thead th {
+    background: #f1f3f5;
+    font-weight: 600;
+}
+
+.md-content .katex-display {
+    margin: 0.75rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.md-content .katex {
+    font-size: 1.05em;
 }
 
 .chat-input-row {
@@ -206,13 +257,10 @@ h1:focus {
     margin-bottom: 0.35rem;
 }
 
-.retrieval-text {
-    margin: 0;
+.md-content.retrieval-md {
     font-size: 0.82rem;
-    line-height: 1.4;
-    white-space: pre-wrap;
-    max-height: 12rem;
-    overflow-y: auto;
+    max-height: 14rem;
+    overflow: auto;
 }
 
 .retrieval-chunk-id {

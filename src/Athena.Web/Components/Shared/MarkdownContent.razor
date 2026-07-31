@@ -1,0 +1,52 @@
+@using Athena.Web.Rendering
+@inject IJSRuntime Js
+
+<div @ref="_host" class="md-content @CssClass">
+    @((MarkupString)_html)
+</div>
+
+@code {
+    private ElementReference _host;
+    private string _html = string.Empty;
+    private string? _renderedText;
+    private bool _pendingMath;
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var text = Text ?? string.Empty;
+        if (string.Equals(text, _renderedText, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _renderedText = text;
+        _html = MarkdownMathRenderer.ToHtml(text);
+        _pendingMath = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_pendingMath)
+        {
+            return;
+        }
+
+        _pendingMath = false;
+        try
+        {
+            await Js.InvokeVoidAsync("athenaRenderMath", _host);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="Athena.Web.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -14,6 +15,10 @@
 
 <body>
     <Routes @rendermode="InteractiveServer" />
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+            onload="window.__athenaKatexReady = true"></script>
+    <script src="js/athena-render.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 

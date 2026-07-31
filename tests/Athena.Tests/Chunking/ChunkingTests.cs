@@ -13,10 +13,10 @@ public sealed class TokenEstimatorTests
     {
         var text = new string('a', 5000) + " " + new string('b', 5000);
 
-        var windows = TokenEstimator.SplitWindows(text, maxTokens: 1000, overlapRatio: 0.20).ToList();
+        var windows = TokenEstimator.SplitWindows(text, maxTokens: 800, overlapRatio: 0.20).ToList();
 
         Assert.True(windows.Count >= 3);
-        Assert.All(windows, window => Assert.True(TokenEstimator.Estimate(window) <= 1000));
+        Assert.All(windows, window => Assert.True(TokenEstimator.Estimate(window) <= 800));
     }
 }
 
@@ -27,7 +27,7 @@ public sealed class FixedWindowChunkerTests
     {
         var chunker = new FixedWindowChunker(Options.Create(new ChunkingOptions
         {
-            MaxTokens = 1000,
+            MaxTokens = 800,
             OverlapRatio = 0.20
         }));
 
@@ -49,7 +49,7 @@ public sealed class SectionAwareChunkerTests
     {
         var chunker = new SectionAwareChunker(Options.Create(new ChunkingOptions
         {
-            MaxTokens = 1000,
+            MaxTokens = 800,
             OverlapRatio = 0.20
         }));
 

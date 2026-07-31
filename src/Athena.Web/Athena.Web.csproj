@@ -5,6 +5,10 @@
     <ProjectReference Include="..\Athena.Ingestion\Athena.Ingestion.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Markdig" />
+  </ItemGroup>
+
   <!-- Ensure agent prompt is available under Web ContentRoot and bin (RegRag-style load). -->
   <ItemGroup>
     <Content Include="..\Athena.Agent\Agents\*.md" Link="Agents\%(Filename)%(Extension)">

@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using Athena.Agent
 @using Athena.Retrieval
+@using Athena.Web.Components.Shared
 @inject AthenaChatSession ChatSession
 
 <PageTitle>Athena</PageTitle>
@@ -19,7 +20,14 @@
                 <div class="chat-message @message.Role">
                     <div class="chat-bubble">
                         <strong>@(message.Role == ChatRole.User ? "You" : "Athena")</strong>
-                        <p style="white-space: pre-wrap">@message.Text</p>
+                        @if (message.Role == ChatRole.User)
+                        {
+                            <p class="chat-plain">@message.Text</p>
+                        }
+                        else
+                        {
+                            <MarkdownContent Text="@message.Text" CssClass="chat-md" />
+                        }
                     </div>
                 </div>
             }
@@ -97,7 +105,7 @@
                         {
                             <div class="retrieval-section text-muted">@passage.Section</div>
                         }
-                        <p class="retrieval-text">@passage.Text</p>
+                        <MarkdownContent Text="@passage.Text" CssClass="retrieval-md" />
                         <div class="retrieval-chunk-id text-muted">@passage.ChunkId</div>
                     </li>
                 }
